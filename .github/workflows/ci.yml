@@ -5,10 +5,47 @@ on:
     branches: [ "main"]
   pull_request:
     branches: [ "main" ]
+  workflow_call:
+    inputs:
+      flavor_slug:
+        description: 'The flavor slug identifier'
+        required: true
+        type: string
+      client_name:
+        description: 'The client name'
+        required: true
+        type: string
+      app_name:
+        description: 'The app name'
+        required: true
+        type: string
+      package_name:
+        description: 'The package name'
+        required: true
+        type: string
+      primary_color:
+        description: 'Primary brand color'
+        required: true
+        type: string
+      secondary_color:
+        description: 'Secondary brand color'
+        required: true
+        type: string
+      background_color:
+        description: 'Background color'
+        required: true
+        type: string
+      logo_path:
+        description: 'Path to the logo file'
+        required: true
+        type: string
+    secrets:
+      FLAVORFLOW_API_KEY:
+        description: 'FlavorFlow API key'
+        required: false
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -19,6 +56,49 @@ jobs:
       with:
         distribution: 'jetbrains'
         java-version: '21'
+
+    - name: Apply Flavor Configuration
+      if: ${{ inputs.flavor_slug != '' }}
+      run: |
+        echo "Applying configuration for flavor: ${{ inputs.flavor_slug }}"
+        echo "Client: ${{ inputs.client_name }}"
+        echo "App Name: ${{ inputs.app_name }}"
+        echo "Package: ${{ inputs.package_name }}"
+        echo "Primary Color: ${{ inputs.primary_color }}"
+        echo "Secondary Color: ${{ inputs.secondary_color }}"
+        echo "Background Color: ${{ inputs.background_color }}"
+        echo "Logo Path: ${{ inputs.logo_path }}"
+        
+        # Create flavor configuration file
+        cat > flavor_config.json << EOF
+        {
+          "slug": "${{ inputs.flavor_slug }}",
+          "clientName": "${{ inputs.client_name }}",
+          "appName": "${{ inputs.app_name }}",
+          "packageName": "${{ inputs.package_name }}",
+          "branding": {
+            "primaryColor": "${{ inputs.primary_color }}",
+            "secondaryColor": "${{ inputs.secondary_color }}",
+            "backgroundColor": "${{ inputs.background_color }}",
+            "logoPath": "${{ inputs.logo_path }}"
+          }
+        }
+        EOF
+
+    - name: Setup Python
+      if: ${{ inputs.flavor_slug != '' }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Apply Branding
+      if: ${{ inputs.flavor_slug != '' }}
+      run: |
+        # Make the Python script executable
+        chmod +x scripts/apply-branding.py
+        
+        # Run the Python branding script
+        python scripts/apply-branding.py
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
@@ -40,5 +120,14 @@ jobs:
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
+        name: ${{ inputs.flavor_slug != '' && format('app-{0}', inputs.flavor_slug) || 'app' }}
         path: '**/outputs/**/*.apk'
-        
+        retention-days: 30
+
+    - name: Upload Build Reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: ${{ inputs.flavor_slug != '' && format('build-reports-{0}', inputs.flavor_slug) || 'build-reports' }}
+        path: '**/build/reports/'
+        retention-days: 7

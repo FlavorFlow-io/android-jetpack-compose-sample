@@ -1,0 +1,64 @@
+{
+  "flavors": [
+    {
+      "slug": "acme-corp",
+      "clientName": "ACME Corporation",
+      "appName": "ACME Business App",
+      "packageName": "com.acmecorp.business",
+      "branding": {
+        "primaryColor": "#FF6B35",
+        "secondaryColor": "#004E89",
+        "backgroundColor": "#F7F9FC",
+        "logoPath": "assets/logos/acme-logo.png"
+      }
+    },
+    {
+      "slug": "techstart-inc",
+      "clientName": "TechStart Inc",
+      "appName": "TechStart Mobile",
+      "packageName": "com.techstart.mobile",
+      "branding": {
+        "primaryColor": "#00D4AA",
+        "secondaryColor": "#5D737E",
+        "backgroundColor": "#FFFFFF",
+        "logoPath": "assets/logos/techstart-logo.png"
+      }
+    },
+    {
+      "slug": "globex-solutions",
+      "clientName": "Globex Solutions",
+      "appName": "Globex Connect",
+      "packageName": "com.globex.connect",
+      "branding": {
+        "primaryColor": "#8E44AD",
+        "secondaryColor": "#F39C12",
+        "backgroundColor": "#ECF0F1",
+        "logoPath": "assets/logos/globex-logo.png"
+      }
+    },
+    {
+      "slug": "nova-enterprises",
+      "clientName": "Nova Enterprises",
+      "appName": "Nova Business Suite",
+      "packageName": "com.nova.business",
+      "branding": {
+        "primaryColor": "#E74C3C",
+        "secondaryColor": "#2C3E50",
+        "backgroundColor": "#F8F9FA",
+        "logoPath": "assets/logos/nova-logo.png"
+      }
+    },
+    {
+      "slug": "zenith-group",
+      "clientName": "Zenith Group",
+      "appName": "Zenith Pro",
+      "packageName": "com.zenith.pro",
+      "branding": {
+        "primaryColor": "#3498DB",
+        "secondaryColor": "#95A5A6",
+        "backgroundColor": "#FAFBFC",
+        "logoPath": "assets/logos/zenith-logo.png"
+      }
+    }
+  ]
+}

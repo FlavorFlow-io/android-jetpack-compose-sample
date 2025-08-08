@@ -1,0 +1,61 @@
+# .github/workflows/build-whitelabel.yml
+name: Build Whitelabel Apps
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  #  # 1. Job para buscar a lista de flavors da API (comentado - usando arquivo local)
+  #  fetch-flavors:
+  #    runs-on: ubuntu-latest
+  #    outputs:
+  #      matrix: ${{ steps.get_flavors.outputs.matrix }}
+  #    steps:
+  #      - name: Fetch Flavors from FlavorFlow API
+  #        id: get_flavors
+  #        # Esta é a sua Action customizada
+  #        uses: your-org/flavorflow-action@v1
+  #        with:
+  #          api_key: ${{ secrets.FLAVORFLOW_API_KEY }}
+  #          project_id: "a1b2c3d4-e5f6-..." # ID do seu projeto no FlavorFlow
+
+  # 1. Job para ler flavors de arquivo local JSON
+  fetch-flavors:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.get_flavors.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Get Flavors from local JSON
+        id: get_flavors
+        run: |
+          # Lê o arquivo JSON local e define como output
+          FLAVORS_JSON=$(cat samples/flavors-sample.json)
+          echo "matrix=$FLAVORS_JSON" >> $GITHUB_OUTPUT
+
+  # 2. Job que roda em matriz, um para cada flavor
+  build-app:
+    needs: fetch-flavors
+    
+    strategy:
+      fail-fast: false
+      # O JSON da Action é injetado aqui dinamicamente
+      matrix:
+        flavor: ${{ fromJson(needs.fetch-flavors.outputs.matrix).flavors }} # ex: [{slug: 'cliente-a'}, {slug: 'cliente-b'}]
+
+    uses: ./.github/workflows/ci.yml
+    with:
+      flavor_slug: ${{ matrix.flavor.slug }}
+      client_name: ${{ matrix.flavor.clientName }}
+      app_name: ${{ matrix.flavor.appName }}
+      package_name: ${{ matrix.flavor.packageName }}
+      primary_color: ${{ matrix.flavor.branding.primaryColor }}
+      secondary_color: ${{ matrix.flavor.branding.secondaryColor }}
+      background_color: ${{ matrix.flavor.branding.backgroundColor }}
+      logo_path: ${{ matrix.flavor.branding.logoPath }}
+    secrets:
+      FLAVORFLOW_API_KEY: ${{ secrets.FLAVORFLOW_API_KEY }}
