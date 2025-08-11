@@ -221,6 +221,64 @@ def find_compose_theme_files():
     
     return theme_files
 
+def detect_existing_package_structure(main_source_dir):
+    """Detect existing package structure to preserve subdirectories"""
+    if not main_source_dir.exists():
+        return None
+    
+    # Look for existing source files to determine package structure
+    for file_path in main_source_dir.rglob('*.kt'):
+        if file_path.is_file():
+            # Get the directory structure relative to main_source_dir
+            relative_path = file_path.parent.relative_to(main_source_dir)
+            
+            # Check if this looks like a UI-related package structure
+            if 'ui' in relative_path.parts:
+                # Find the parent directory of 'ui'
+                ui_index = relative_path.parts.index('ui')
+                package_structure = main_source_dir
+                for part in relative_path.parts[:ui_index + 1]:  # Include 'ui'
+                    package_structure = package_structure / part
+                return package_structure
+    
+    # Look for any existing package structure
+    for file_path in main_source_dir.rglob('*.kt'):
+        if file_path.is_file():
+            # Return the deepest package directory found
+            return file_path.parent
+    
+    return None
+
+def get_package_from_directory_structure(existing_structure, main_source_dir, base_package):
+    """Get the package name from directory structure"""
+    if not existing_structure:
+        return f"{base_package}.ui"
+    
+    try:
+        # Get relative path from main source dir to existing structure
+        relative_path = existing_structure.relative_to(main_source_dir)
+        
+        # Convert path to package notation
+        if relative_path.parts:
+            # Replace the base package part with the new base package
+            path_parts = list(relative_path.parts)
+            
+            # Find where the actual package starts (skip the base package directories)
+            package_parts = base_package.split('.')
+            if len(path_parts) >= len(package_parts):
+                # Keep only the subdirectory parts (like 'ui')
+                subdir_parts = path_parts[len(package_parts):]
+                if subdir_parts:
+                    return f"{base_package}.{'.'.join(subdir_parts)}"
+            else:
+                # Use all path parts as subdirectories
+                return f"{base_package}.{'.'.join(path_parts)}"
+    except ValueError:
+        # Path is not relative to main_source_dir
+        pass
+    
+    return f"{base_package}.ui"
+
 def update_existing_compose_theme(theme_file, config):
     """Update existing Compose theme file"""
     with open(theme_file, 'r') as f:
@@ -297,29 +355,44 @@ def create_compose_theme_files(config):
         print(f"⚠ No source directory found, creating in {app_module}/{JAVA_SOURCE_DIR}")
         main_source_dir = app_module / JAVA_SOURCE_DIR
     
-    # Create theme directory structure
-    package_path = config["packageName"].replace('.', '/')
-    theme_dir = main_source_dir / package_path / 'ui' / 'theme'
+    # Try to detect existing package structure and preserve subdirectories
+    existing_package_structure = detect_existing_package_structure(main_source_dir)
+    
+    if existing_package_structure:
+        # Use the existing package structure (preserves subdirectories like 'ui')
+        theme_dir = existing_package_structure / 'theme'
+        package_with_subdir = get_package_from_directory_structure(existing_package_structure, main_source_dir, config["packageName"])
+    else:
+        # Fallback to default structure with 'ui' subdirectory
+        package_path = config["packageName"].replace('.', '/')
+        theme_dir = main_source_dir / package_path / 'ui' / 'theme'
+        package_with_subdir = f'{config["packageName"]}.ui'
+    
     os.makedirs(theme_dir, exist_ok=True)
     
     # Create Color.kt file
-    create_compose_color_file(theme_dir, config)
+    create_compose_color_file(theme_dir, config, package_with_subdir)
     
     # Create Theme.kt file
-    create_compose_theme_file(theme_dir, config)
+    create_compose_theme_file(theme_dir, config, package_with_subdir)
     
     # Create Type.kt file (Typography)
-    create_compose_typography_file(theme_dir, config)
+    create_compose_typography_file(theme_dir, config, package_with_subdir)
     
     print(f"✓ Created Compose theme files in: {theme_dir}")
 
-def create_compose_color_file(theme_dir, config):
+def create_compose_color_file(theme_dir, config, package_name=None):
     """Create Color.kt file for Compose"""
+    if package_name is None:
+        package_name = f'{config["packageName"]}.ui.theme'
+    else:
+        package_name = f'{package_name}.theme'
+    
     primary_color = hex_to_compose_color(config["branding"]["primaryColor"])
     secondary_color = hex_to_compose_color(config["branding"]["secondaryColor"])
     background_color = hex_to_compose_color(config["branding"]["backgroundColor"])
     
-    color_content = f'''package {config["packageName"]}.ui.theme
+    color_content = f'''package {package_name}
 
 import androidx.compose.ui.graphics.Color
 
@@ -347,11 +420,16 @@ val BrandBackground = Color({background_color})
     with open(color_file, 'w') as f:
         f.write(color_content)
 
-def create_compose_theme_file(theme_dir, config):
+def create_compose_theme_file(theme_dir, config, package_name=None):
     """Create Theme.kt file for Compose"""
+    if package_name is None:
+        package_name = f'{config["packageName"]}.ui.theme'
+    else:
+        package_name = f'{package_name}.theme'
+    
     app_name = config["appName"].replace(' ', '')
     
-    theme_content = f'''package {config["packageName"]}.ui.theme
+    theme_content = f'''package {package_name}
 
 import android.app.Activity
 import android.os.Build
@@ -418,9 +496,14 @@ fun {app_name}Theme(
     with open(theme_file, 'w') as f:
         f.write(theme_content)
 
-def create_compose_typography_file(theme_dir, config):
+def create_compose_typography_file(theme_dir, config, package_name=None):
     """Create Type.kt file for Compose Typography"""
-    typography_content = f'''package {config["packageName"]}.ui.theme
+    if package_name is None:
+        package_name = f'{config["packageName"]}.ui.theme'
+    else:
+        package_name = f'{package_name}.theme'
+    
+    typography_content = f'''package {package_name}
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
