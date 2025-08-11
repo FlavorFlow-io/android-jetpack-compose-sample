@@ -26,6 +26,9 @@ JAVA_EXTENSION = '.java'
 KOTLIN_EXTENSION = '.kt'
 SOURCE_EXTENSIONS = [JAVA_EXTENSION, KOTLIN_EXTENSION]
 
+# Regex patterns
+PACKAGE_PATTERN = r'^package\s+([a-zA-Z][a-zA-Z0-9_.]*)'
+
 # Global variable to cache the Android app module path
 _android_app_module = None
 
@@ -226,28 +229,62 @@ def detect_existing_package_structure(main_source_dir):
     if not main_source_dir.exists():
         return None
     
-    # Look for existing source files to determine package structure
+    # Look for the first source file and analyze its package structure
     for file_path in main_source_dir.rglob('*.kt'):
         if file_path.is_file():
-            # Get the directory structure relative to main_source_dir
-            relative_path = file_path.parent.relative_to(main_source_dir)
-            
-            # Check if this looks like a UI-related package structure
-            if 'ui' in relative_path.parts:
-                # Find the parent directory of 'ui'
-                ui_index = relative_path.parts.index('ui')
-                package_structure = main_source_dir
-                for part in relative_path.parts[:ui_index + 1]:  # Include 'ui'
-                    package_structure = package_structure / part
-                return package_structure
+            package_info = extract_package_info(file_path)
+            if package_info:
+                return build_package_structure_path(main_source_dir, package_info)
     
-    # Look for any existing package structure
-    for file_path in main_source_dir.rglob('*.kt'):
-        if file_path.is_file():
-            # Return the deepest package directory found
-            return file_path.parent
+    # Fallback: Return the deepest existing directory
+    return find_deepest_package_directory(main_source_dir)
+
+def extract_package_info(file_path):
+    """Extract package information from a source file"""
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
+        
+        package_match = re.search(PACKAGE_PATTERN, content, re.MULTILINE)
+        if package_match:
+            package_name = package_match.group(1)
+            package_parts = package_name.split('.')
+            return package_parts
+            
+    except Exception as e:
+        print(f"⚠ Error reading {file_path}: {e}")
     
     return None
+
+def build_package_structure_path(main_source_dir, package_parts):
+    """Build the filesystem path from package parts"""
+    if len(package_parts) > 3:
+        # Assume first 3 parts are base package, rest are subdirectories
+        base_parts = package_parts[:3]
+        subdir_parts = package_parts[3:]
+        
+        # Build path: main_source_dir/base_package/subdirs
+        path = main_source_dir
+        for part in base_parts + subdir_parts:
+            path = path / part
+        return path
+    
+    return None
+
+def find_deepest_package_directory(main_source_dir):
+    """Find the deepest package directory as fallback"""
+    deepest_dir = None
+    max_depth = 0
+    
+    for file_path in main_source_dir.rglob('*.kt'):
+        if file_path.is_file():
+            relative_path = file_path.parent.relative_to(main_source_dir)
+            depth = len(relative_path.parts)
+            if depth > max_depth:
+                max_depth = depth
+                deepest_dir = file_path.parent
+    
+    return deepest_dir
 
 def get_package_from_directory_structure(existing_structure, main_source_dir, base_package):
     """Get the package name from directory structure"""
@@ -260,18 +297,16 @@ def get_package_from_directory_structure(existing_structure, main_source_dir, ba
         
         # Convert path to package notation
         if relative_path.parts:
-            # Replace the base package part with the new base package
             path_parts = list(relative_path.parts)
+            base_parts = base_package.split('.')
             
-            # Find where the actual package starts (skip the base package directories)
-            package_parts = base_package.split('.')
-            if len(path_parts) >= len(package_parts):
-                # Keep only the subdirectory parts (like 'ui')
-                subdir_parts = path_parts[len(package_parts):]
-                if subdir_parts:
-                    return f"{base_package}.{'.'.join(subdir_parts)}"
+            # If we have more path parts than base package parts,
+            # the extra parts are subdirectories
+            if len(path_parts) > len(base_parts):
+                subdir_parts = path_parts[len(base_parts):]
+                return f"{base_package}.{'.'.join(subdir_parts)}"
             else:
-                # Use all path parts as subdirectories
+                # Use all path parts as subdirectories relative to base package
                 return f"{base_package}.{'.'.join(path_parts)}"
     except ValueError:
         # Path is not relative to main_source_dir
@@ -355,18 +390,28 @@ def create_compose_theme_files(config):
         print(f"⚠ No source directory found, creating in {app_module}/{JAVA_SOURCE_DIR}")
         main_source_dir = app_module / JAVA_SOURCE_DIR
     
-    # Try to detect existing package structure and preserve subdirectories
-    existing_package_structure = detect_existing_package_structure(main_source_dir)
+    # Always create theme files in ui.theme subdirectory structure
+    # First check if there's already a ui.theme structure we should preserve
+    package_path = config["packageName"].replace('.', '/')
     
-    if existing_package_structure:
-        # Use the existing package structure (preserves subdirectories like 'ui')
-        theme_dir = existing_package_structure / 'theme'
-        package_with_subdir = get_package_from_directory_structure(existing_package_structure, main_source_dir, config["packageName"])
-    else:
-        # Fallback to default structure with 'ui' subdirectory
-        package_path = config["packageName"].replace('.', '/')
-        theme_dir = main_source_dir / package_path / 'ui' / 'theme'
+    # Look for existing ui/theme structure
+    existing_ui_theme_dir = main_source_dir / package_path / 'ui' / 'theme'
+    if existing_ui_theme_dir.exists():
+        print(f"📱 Found existing ui/theme structure at: {existing_ui_theme_dir}")
+        theme_dir = existing_ui_theme_dir
         package_with_subdir = f'{config["packageName"]}.ui'
+    else:
+        # Check if there's any existing theme structure with different subdirectories
+        existing_structure = detect_existing_theme_structure(main_source_dir, package_path)
+        if existing_structure:
+            print(f"📱 Found existing theme structure at: {existing_structure}")
+            theme_dir = existing_structure / 'theme'
+            package_with_subdir = get_package_from_theme_structure(existing_structure, main_source_dir, config["packageName"])
+        else:
+            # Default to ui.theme structure
+            print("📱 Creating new ui/theme structure")
+            theme_dir = main_source_dir / package_path / 'ui' / 'theme'
+            package_with_subdir = f'{config["packageName"]}.ui'
     
     os.makedirs(theme_dir, exist_ok=True)
     
@@ -380,6 +425,40 @@ def create_compose_theme_files(config):
     create_compose_typography_file(theme_dir, config, package_with_subdir)
     
     print(f"✓ Created Compose theme files in: {theme_dir}")
+
+def detect_existing_theme_structure(main_source_dir, package_path):
+    """Detect existing theme-related file structure specifically"""
+    base_package_dir = main_source_dir / package_path
+    
+    if not base_package_dir.exists():
+        return None
+    
+    # Look for theme-related files in subdirectories
+    for subdir in base_package_dir.rglob('*'):
+        if subdir.is_dir():
+            # Check if this directory contains theme files
+            theme_files = list(subdir.glob('*Theme*.kt')) + list(subdir.glob('*Color*.kt')) + list(subdir.glob('*Type*.kt'))
+            if theme_files and 'theme' in subdir.name.lower():
+                # Found theme files in a theme directory
+                return subdir.parent
+    
+    return None
+
+def get_package_from_theme_structure(theme_structure, main_source_dir, base_package):
+    """Get package name from theme directory structure"""
+    try:
+        relative_path = theme_structure.relative_to(main_source_dir)
+        package_parts = base_package.split('.')
+        
+        # Remove base package parts from path
+        path_parts = list(relative_path.parts)
+        if len(path_parts) > len(package_parts):
+            subdir_parts = path_parts[len(package_parts):]
+            return f"{base_package}.{'.'.join(subdir_parts)}"
+    except ValueError:
+        pass
+    
+    return f"{base_package}.ui"
 
 def create_compose_color_file(theme_dir, config, package_name=None):
     """Create Color.kt file for Compose"""
@@ -654,7 +733,7 @@ def extract_package_from_file(file_path):
             content = f.read()
         
         # Extract package declaration
-        package_match = re.search(r'^package\s+([a-zA-Z][a-zA-Z0-9_.]*)', content, re.MULTILINE)
+        package_match = re.search(PACKAGE_PATTERN, content, re.MULTILINE)
         return package_match.group(1) if package_match else None
         
     except Exception as e:
@@ -780,7 +859,7 @@ def move_source_files(old_package_dir, new_package_dir, new_package):
 def update_package_declaration(content, new_package):
     """Update package declaration and all references to old package in source files"""
     # First, extract the old package name from the current content
-    old_package_match = re.search(r'^package\s+([a-zA-Z][a-zA-Z0-9_.]*)', content, re.MULTILINE)
+    old_package_match = re.search(PACKAGE_PATTERN, content, re.MULTILINE)
     old_package = old_package_match.group(1) if old_package_match else None
     
     if old_package and old_package != new_package:
