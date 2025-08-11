@@ -9,10 +9,119 @@ the flavor configuration JSON file.
 import json
 import os
 import re
-import shutil
 import sys
 from pathlib import Path
 from PIL import Image, ImageDraw
+
+# Constants
+JAVA_SOURCE_DIR = 'src/main/java'
+KOTLIN_SOURCE_DIR = 'src/main/kotlin'
+TEST_JAVA_SOURCE_DIR = 'src/test/java'
+TEST_KOTLIN_SOURCE_DIR = 'src/test/kotlin'
+ANDROID_TEST_JAVA_SOURCE_DIR = 'src/androidTest/java'
+ANDROID_TEST_KOTLIN_SOURCE_DIR = 'src/androidTest/kotlin'
+
+# File extensions
+JAVA_EXTENSION = '.java'
+KOTLIN_EXTENSION = '.kt'
+SOURCE_EXTENSIONS = [JAVA_EXTENSION, KOTLIN_EXTENSION]
+
+# Global variable to cache the Android app module path
+_android_app_module = None
+
+def find_android_app_module():
+    """Find the Android application module by looking for build.gradle with android application plugin"""
+    global _android_app_module
+    
+    # Return cached result if already found
+    if _android_app_module is not None:
+        return _android_app_module
+    
+    # Search for build.gradle files in the current directory and subdirectories
+    for build_file in Path('.').glob('**/build.gradle*'):
+        if build_file.is_file():
+            try:
+                with open(build_file, 'r') as f:
+                    content = f.read()
+                
+                # Check for Android application plugin in various formats
+                if (is_android_application_plugin(content)):
+                    app_module_dir = build_file.parent
+                    print(f"📱 Found Android app module: {app_module_dir}")
+                    _android_app_module = app_module_dir
+                    return app_module_dir
+                    
+            except Exception as e:
+                print(f"⚠ Error reading {build_file}: {e}")
+                continue
+    
+    # Fallback to 'app' directory if nothing found
+    print("⚠ No Android app module found, falling back to 'app' directory")
+    _android_app_module = Path('app')
+    return _android_app_module
+
+def has_android_application_plugin(content):
+    """Check if build.gradle content contains Android application plugin declaration"""
+    # Traditional plugin application
+    if ('com.android.application' in content or 
+        "apply plugin: 'com.android.application'" in content):
+        return True
+    
+    # Kotlin DSL style
+    if ("id 'com.android.application'" in content or
+        'id("com.android.application")' in content):
+        return True
+    
+    # Version catalog style
+    if (re.search(r'alias\s*\(\s*libs\.plugins\.android\.application\s*\)', content) or
+        re.search(r'id\s*\(\s*libs\.plugins\.android\.application\s*\)', content)):
+        return True
+    
+    # Version catalog with string interpolation
+    if re.search(r'id\s*\(\s*["\'].*android\.application["\']\s*\)', content):
+        return True
+    
+    # Check plugins block
+    return has_android_application_in_plugins_block(content)
+
+def has_android_application_in_plugins_block(content):
+    """Check for android.application in plugins block"""
+    if 'plugins {' not in content:
+        return False
+        
+    plugins_match = re.search(r'plugins\s*\{([^}]+)\}', content, re.DOTALL)
+    if not plugins_match:
+        return False
+        
+    plugins_block = plugins_match.group(1)
+    
+    # Look for android.application in plugins block (but not with "apply false")
+    if ('android.application' in plugins_block or
+        'libs.plugins.android.application' in plugins_block):
+        # Check if it's not applied as false (which would be in root build.gradle)
+        return 'apply false' not in plugins_block
+    
+    return False
+
+def has_android_config_block(content):
+    """Check if build.gradle content contains android configuration block"""
+    return re.search(r'android\s*\{', content) is not None
+
+def is_android_application_plugin(content):
+    """Check if build.gradle content contains Android application plugin and android configuration"""
+    return has_android_application_plugin(content) and has_android_config_block(content)
+
+def reset_android_app_module_cache():
+    """Reset the cached Android app module path (useful for testing)"""
+    global _android_app_module
+    _android_app_module = None
+
+def get_app_source_path(subpath=""):
+    """Get the path to app sources, dynamically finding the app module"""
+    app_module = find_android_app_module()
+    if subpath:
+        return app_module / subpath
+    return app_module
 
 def load_config(file_path):
     """Load the flavor configuration from JSON file"""
@@ -21,7 +130,7 @@ def load_config(file_path):
 
 def update_app_name(config):
     """Update app name in strings.xml"""
-    strings_path = Path('app/src/main/res/values/strings.xml')
+    strings_path = get_app_source_path('src/main/res/values/strings.xml')
     if strings_path.exists():
         with open(strings_path, 'r') as f:
             content = f.read()
@@ -44,8 +153,16 @@ def update_app_name(config):
 </resources>''')
 
 def update_colors(config):
+    """Update colors in colors.xml and Compose theme files"""
+    # Update XML colors (for compatibility)
+    update_xml_colors(config)
+    
+    # Update Compose theme files
+    update_compose_theme(config)
+
+def update_xml_colors(config):
     """Update colors in colors.xml"""
-    colors_path = Path('app/src/main/res/values/colors.xml')
+    colors_path = get_app_source_path('src/main/res/values/colors.xml')
     
     # Create colors.xml content
     colors_content = f'''<?xml version="1.0" encoding="utf-8"?>
@@ -67,14 +184,288 @@ def update_colors(config):
     os.makedirs(colors_path.parent, exist_ok=True)
     with open(colors_path, 'w') as f:
         f.write(colors_content)
-    print(f"✓ Updated colors: primary={config['branding']['primaryColor']}, secondary={config['branding']['secondaryColor']}")
+    print(f"✓ Updated XML colors: primary={config['branding']['primaryColor']}, secondary={config['branding']['secondaryColor']}")
+
+def update_compose_theme(config):
+    """Update Compose theme files"""
+    # Look for existing Compose theme files
+    theme_files = find_compose_theme_files()
+    
+    if theme_files:
+        for theme_file in theme_files:
+            update_existing_compose_theme(theme_file, config)
+    else:
+        # Create new Compose theme files
+        create_compose_theme_files(config)
+
+def find_compose_theme_files():
+    """Find existing Compose theme files"""
+    theme_files = []
+    app_module = find_android_app_module()  # This will use cached result
+    
+    # Common paths for Compose theme files relative to app module
+    search_paths = [
+        f'{JAVA_SOURCE_DIR}/**/ui/theme',
+        f'{KOTLIN_SOURCE_DIR}/**/ui/theme',
+        f'{JAVA_SOURCE_DIR}/**/theme',
+        f'{KOTLIN_SOURCE_DIR}/**/theme'
+    ]
+    
+    for search_path in search_paths:
+        for path in app_module.glob(search_path):
+            if path.is_dir():
+                # Look for theme-related files
+                for file in path.glob('*.kt'):
+                    if any(keyword in file.name.lower() for keyword in ['color', 'theme']):
+                        theme_files.append(file)
+    
+    return theme_files
+
+def update_existing_compose_theme(theme_file, config):
+    """Update existing Compose theme file"""
+    with open(theme_file, 'r') as f:
+        content = f.read()
+    
+    # Update color definitions based on common patterns
+    content = update_compose_colors(content, config)
+    
+    with open(theme_file, 'w') as f:
+        f.write(content)
+    
+    print(f"✓ Updated Compose theme file: {theme_file}")
+
+def update_compose_colors(content, config):
+    """Update color definitions in Compose theme content"""
+    primary_color = config["branding"]["primaryColor"]
+    secondary_color = config["branding"]["secondaryColor"]
+    background_color = config["branding"]["backgroundColor"]
+    
+    # Convert hex to Compose Color format
+    primary_compose = hex_to_compose_color(primary_color)
+    secondary_compose = hex_to_compose_color(secondary_color)
+    background_compose = hex_to_compose_color(background_color)
+    
+    # Update various color patterns
+    patterns = [
+        # Standard color definitions
+        (r'val\s+Primary\s*=\s*Color\([^)]+\)', f'val Primary = Color({primary_compose})'),
+        (r'val\s+Secondary\s*=\s*Color\([^)]+\)', f'val Secondary = Color({secondary_compose})'),
+        (r'val\s+Background\s*=\s*Color\([^)]+\)', f'val Background = Color({background_compose})'),
+        
+        # Material3 color scheme patterns
+        (r'primary\s*=\s*Color\([^)]+\)', f'primary = Color({primary_compose})'),
+        (r'secondary\s*=\s*Color\([^)]+\)', f'secondary = Color({secondary_compose})'),
+        (r'background\s*=\s*Color\([^)]+\)', f'background = Color({background_compose})'),
+        
+        # Custom color definitions
+        (r'val\s+primaryColor\s*=\s*Color\([^)]+\)', f'val primaryColor = Color({primary_compose})'),
+        (r'val\s+secondaryColor\s*=\s*Color\([^)]+\)', f'val secondaryColor = Color({secondary_compose})'),
+        (r'val\s+backgroundColor\s*=\s*Color\([^)]+\)', f'val backgroundColor = Color({background_compose})'),
+    ]
+    
+    for pattern, replacement in patterns:
+        content = re.sub(pattern, replacement, content, flags=re.IGNORECASE)
+    
+    return content
+
+def hex_to_compose_color(hex_color):
+    """Convert hex color to Compose Color format"""
+    # Remove # if present
+    hex_color = hex_color.lstrip('#')
+    
+    # Add alpha channel if not present (ARGB format)
+    if len(hex_color) == 6:
+        hex_color = 'FF' + hex_color
+    
+    return f'0x{hex_color}'
+
+def create_compose_theme_files(config):
+    """Create new Compose theme files if none exist"""
+    app_module = find_android_app_module()  # This will use cached result
+    
+    # Find the main source directory
+    source_dirs = [JAVA_SOURCE_DIR, KOTLIN_SOURCE_DIR]
+    main_source_dir = None
+    
+    for source_dir in source_dirs:
+        source_path = app_module / source_dir
+        if source_path.exists():
+            main_source_dir = source_path
+            break
+    
+    if not main_source_dir:
+        print(f"⚠ No source directory found, creating in {app_module}/{JAVA_SOURCE_DIR}")
+        main_source_dir = app_module / JAVA_SOURCE_DIR
+    
+    # Create theme directory structure
+    package_path = config["packageName"].replace('.', '/')
+    theme_dir = main_source_dir / package_path / 'ui' / 'theme'
+    os.makedirs(theme_dir, exist_ok=True)
+    
+    # Create Color.kt file
+    create_compose_color_file(theme_dir, config)
+    
+    # Create Theme.kt file
+    create_compose_theme_file(theme_dir, config)
+    
+    # Create Type.kt file (Typography)
+    create_compose_typography_file(theme_dir, config)
+    
+    print(f"✓ Created Compose theme files in: {theme_dir}")
+
+def create_compose_color_file(theme_dir, config):
+    """Create Color.kt file for Compose"""
+    primary_color = hex_to_compose_color(config["branding"]["primaryColor"])
+    secondary_color = hex_to_compose_color(config["branding"]["secondaryColor"])
+    background_color = hex_to_compose_color(config["branding"]["backgroundColor"])
+    
+    color_content = f'''package {config["packageName"]}.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+val Primary = Color({primary_color})
+val Secondary = Color({secondary_color})
+val Background = Color({background_color})
+
+// Light theme colors
+val LightPrimary = Color({primary_color})
+val LightSecondary = Color({secondary_color})
+val LightBackground = Color({background_color})
+
+// Dark theme colors (you can customize these)
+val DarkPrimary = Color({primary_color})
+val DarkSecondary = Color({secondary_color})
+val DarkBackground = Color(0xFF121212)
+
+// Additional brand colors
+val BrandPrimary = Color({primary_color})
+val BrandSecondary = Color({secondary_color})
+val BrandBackground = Color({background_color})
+'''
+    
+    color_file = theme_dir / 'Color.kt'
+    with open(color_file, 'w') as f:
+        f.write(color_content)
+
+def create_compose_theme_file(theme_dir, config):
+    """Create Theme.kt file for Compose"""
+    app_name = config["appName"].replace(' ', '')
+    
+    theme_content = f'''package {config["packageName"]}.ui.theme
+
+import android.app.Activity
+import android.os.Build
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+
+private val LightColorScheme = lightColorScheme(
+    primary = LightPrimary,
+    secondary = LightSecondary,
+    background = LightBackground,
+    // Add more colors as needed
+)
+
+private val DarkColorScheme = darkColorScheme(
+    primary = DarkPrimary,
+    secondary = DarkSecondary,
+    background = DarkBackground,
+    // Add more colors as needed
+)
+
+@Composable
+fun {app_name}Theme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    dynamicColor: Boolean = true,
+    content: @Composable () -> Unit
+) {{
+    val colorScheme = when {{
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {{
+            val context = LocalContext.current
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }}
+        darkTheme -> DarkColorScheme
+        else -> LightColorScheme
+    }}
+    
+    val view = LocalView.current
+    if (!view.isInEditMode) {{
+        SideEffect {{
+            val window = (view.context as Activity).window
+            window.statusBarColor = colorScheme.primary.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+        }}
+    }}
+
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = Typography,
+        content = content
+    )
+}}
+'''
+    
+    theme_file = theme_dir / 'Theme.kt'
+    with open(theme_file, 'w') as f:
+        f.write(theme_content)
+
+def create_compose_typography_file(theme_dir, config):
+    """Create Type.kt file for Compose Typography"""
+    typography_content = f'''package {config["packageName"]}.ui.theme
+
+import androidx.compose.material3.Typography
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+
+// Set of Material typography styles to start with
+val Typography = Typography(
+    bodyLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp,
+        lineHeight = 24.sp,
+        letterSpacing = 0.5.sp
+    ),
+    titleLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Normal,
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        letterSpacing = 0.sp
+    ),
+    labelSmall = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Medium,
+        fontSize = 11.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.5.sp
+    )
+)
+'''
+    
+    typography_file = theme_dir / 'Type.kt'
+    with open(typography_file, 'w') as f:
+        f.write(typography_content)
 
 def update_package_name(config):
     """Update package name in build.gradle and AndroidManifest.xml"""
+    app_module = find_android_app_module()  # This will use cached result
+    
     # Update build.gradle
-    build_gradle_path = Path('app/build.gradle.kts')
+    build_gradle_path = app_module / 'build.gradle.kts'
     if not build_gradle_path.exists():
-        build_gradle_path = Path('app/build.gradle')
+        build_gradle_path = app_module / 'build.gradle'
     
     if build_gradle_path.exists():
         with open(build_gradle_path, 'r') as f:
@@ -90,7 +481,7 @@ def update_package_name(config):
         print(f"✓ Updated package name in build.gradle to: {config['packageName']}")
     
     # Update AndroidManifest.xml
-    manifest_path = Path('app/src/main/AndroidManifest.xml')
+    manifest_path = get_app_source_path('src/main/AndroidManifest.xml')
     if manifest_path.exists():
         with open(manifest_path, 'r') as f:
             content = f.read()
@@ -106,25 +497,27 @@ def update_package_name(config):
 
 def restructure_source_directories(config):
     """Restructure source directories to match the new package name"""
+    app_module = find_android_app_module()  # This will use cached result
+    
     # Define source directories to process
     source_dirs = [
-        'app/src/main/java',
-        'app/src/main/kotlin',
-        'app/src/test/java',
-        'app/src/test/kotlin',
-        'app/src/androidTest/java',
-        'app/src/androidTest/kotlin'
+        JAVA_SOURCE_DIR,
+        KOTLIN_SOURCE_DIR,
+        TEST_JAVA_SOURCE_DIR,
+        TEST_KOTLIN_SOURCE_DIR,
+        ANDROID_TEST_JAVA_SOURCE_DIR,
+        ANDROID_TEST_KOTLIN_SOURCE_DIR
     ]
     
     new_package = config["packageName"]
     new_package_path = new_package.replace('.', '/')
     
     for source_dir in source_dirs:
-        source_path = Path(source_dir)
+        source_path = app_module / source_dir
         if not source_path.exists():
             continue
             
-        print(f"🔄 Processing {source_dir}...")
+        print(f"🔄 Processing {source_path}...")
         
         # Find existing package structure
         existing_packages = find_existing_packages(source_path)
@@ -148,7 +541,7 @@ def find_existing_packages(source_path):
     
     # Look for directories that contain .kt or .java files
     for item in source_path.rglob('*'):
-        if item.is_file() and item.suffix in ['.kt', '.java']:
+        if item.is_file() and item.suffix in SOURCE_EXTENSIONS:
             # Get the package directory (parent of the file)
             package_dir = item.parent
             if package_dir not in existing_packages and package_dir != source_path:
@@ -165,8 +558,9 @@ def move_source_files(old_package_dir, new_package_dir, new_package):
     os.makedirs(new_package_dir, exist_ok=True)
     
     # Move all source files
+    moved_files = []
     for file_path in old_package_dir.glob('*'):
-        if file_path.is_file() and file_path.suffix in ['.kt', '.java']:
+        if file_path.is_file() and file_path.suffix in SOURCE_EXTENSIONS:
             # Read file content
             with open(file_path, 'r') as f:
                 content = f.read()
@@ -180,12 +574,19 @@ def move_source_files(old_package_dir, new_package_dir, new_package):
                 f.write(content)
             
             print(f"  ✓ Moved {file_path.name} to {new_package_dir}")
+            moved_files.append(file_path.name)
             
             # Remove old file
             file_path.unlink()
     
-    # Remove old empty directories
-    cleanup_empty_directories(old_package_dir)
+    if moved_files:
+        # Get the root of the old package structure to clean up
+        old_package_root = get_old_package_root(old_package_dir)
+        
+        # Remove old empty directories starting from the deepest level
+        cleanup_old_package_structure(old_package_root)
+        
+        print(f"  🗑️ Cleaned up old package structure starting from {old_package_root}")
 
 def update_package_declaration(content, new_package):
     """Update package declaration in source files"""
@@ -195,6 +596,57 @@ def update_package_declaration(content, new_package):
     content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
     
     return content
+
+def get_old_package_root(package_dir):
+    """Get the root directory of the old package structure to clean up"""
+    # Walk up the directory tree to find the first directory that contains source files
+    # or is at the source root level (src/main/java, src/main/kotlin, etc.)
+    current_dir = package_dir
+    
+    while current_dir.parent != current_dir:  # Not at filesystem root
+        parent = current_dir.parent
+        
+        # Check if we're at a source root directory
+        if parent.name in ['java', 'kotlin'] and parent.parent.name == 'main':
+            break
+            
+        # Check if parent has other source files (indicating it's shared)
+        has_other_files = any(
+            f.suffix in SOURCE_EXTENSIONS 
+            for f in parent.rglob('*') 
+            if f.is_file() and f != current_dir
+        )
+        
+        if has_other_files:
+            break
+            
+        current_dir = parent
+    
+    return current_dir
+
+def cleanup_old_package_structure(start_dir):
+    """Remove old package directories recursively, starting from the deepest level"""
+    if not start_dir.exists() or not start_dir.is_dir():
+        return
+    
+    # First, recursively clean up subdirectories
+    for subdir in start_dir.iterdir():
+        if subdir.is_dir():
+            cleanup_old_package_structure(subdir)
+    
+    # Then check if this directory is now empty and can be removed
+    try:
+        if start_dir.exists() and start_dir.is_dir():
+            # Check if directory is empty
+            contents = list(start_dir.iterdir())
+            if not contents:
+                # Don't remove source root directories
+                if start_dir.name not in ['java', 'kotlin', 'main', 'src', 'test', 'androidTest']:
+                    start_dir.rmdir()
+                    print(f"    🗑️ Removed empty directory: {start_dir}")
+    except OSError as e:
+        # Directory not empty or permission error
+        print(f"    ⚠ Could not remove directory {start_dir}: {e}")
 
 def cleanup_empty_directories(directory):
     """Remove empty directories recursively"""
@@ -224,10 +676,12 @@ def generate_app_icons(config):
     generate_launcher_icons(logo_path, config)
     
     # Update AndroidManifest to use the new icons
-    update_manifest_icons(config)
+    update_manifest_icons()
 
 def generate_launcher_icons(logo_path, config):
     """Generate launcher icons in various densities"""
+    app_module = find_android_app_module()  # This will use cached result
+    
     # Android launcher icon sizes (in pixels)
     icon_sizes = {
         'mdpi': 48,
@@ -251,7 +705,7 @@ def generate_launcher_icons(logo_path, config):
     
     for density, size in icon_sizes.items():
         # Create mipmap directory
-        mipmap_dir = Path(f'app/src/main/res/mipmap-{density}')
+        mipmap_dir = app_module / f'src/main/res/mipmap-{density}'
         os.makedirs(mipmap_dir, exist_ok=True)
         
         # Generate square icon
@@ -275,7 +729,7 @@ def generate_launcher_icons(logo_path, config):
     generate_adaptive_background(config)
     
     # Generate adaptive icon XML
-    generate_adaptive_icon_xml(config)
+    generate_adaptive_icon_xml()
 
 def create_square_icon(source_image, size):
     """Create a square launcher icon"""
@@ -331,6 +785,8 @@ def create_adaptive_foreground(source_image, size):
 
 def generate_adaptive_background(config):
     """Generate adaptive icon background"""
+    app_module = find_android_app_module()  # This will use cached result
+    
     # Use primary color as background
     primary_color = config["branding"]["primaryColor"]
     
@@ -347,7 +803,7 @@ def generate_adaptive_background(config):
     }
     
     for density, size in icon_sizes.items():
-        mipmap_dir = Path(f'app/src/main/res/mipmap-{density}')
+        mipmap_dir = app_module / f'src/main/res/mipmap-{density}'
         os.makedirs(mipmap_dir, exist_ok=True)
         
         # Create solid color background
@@ -355,10 +811,12 @@ def generate_adaptive_background(config):
         background_path = mipmap_dir / 'ic_launcher_background.webp'
         background.save(background_path, 'WEBP', quality=90)
 
-def generate_adaptive_icon_xml(config):
+def generate_adaptive_icon_xml():
     """Generate adaptive icon XML files"""
-    # Create drawable directory
-    drawable_dir = Path('app/src/main/res/drawable')
+    app_module = find_android_app_module()  # This will use cached result
+    
+    # Create drawable-v26 directory (adaptive icons require API 26+)
+    drawable_dir = app_module / 'src/main/res/drawable-v26'
     os.makedirs(drawable_dir, exist_ok=True)
     
     # Generate ic_launcher.xml
@@ -381,11 +839,11 @@ def generate_adaptive_icon_xml(config):
     with open(drawable_dir / 'ic_launcher_round.xml', 'w') as f:
         f.write(launcher_round_xml)
     
-    print("✓ Generated adaptive icon XML files")
+    print("✓ Generated adaptive icon XML files in drawable-v26")
 
-def update_manifest_icons(config):
+def update_manifest_icons():
     """Update AndroidManifest.xml to use the generated icons"""
-    manifest_path = Path('app/src/main/AndroidManifest.xml')
+    manifest_path = get_app_source_path('src/main/AndroidManifest.xml')
     if not manifest_path.exists():
         print("⚠ AndroidManifest.xml not found")
         return
@@ -422,11 +880,29 @@ def update_manifest_icons(config):
 
 def create_theme_xml(config):
     """Create or update theme.xml with brand colors"""
-    theme_path = Path('app/src/main/res/values/themes.xml')
+    theme_path = get_app_source_path('src/main/res/values/themes.xml')
+    
+    # Check if the project uses Compose primarily
+    if uses_compose_theming():
+        print("✓ Project uses Compose theming, skipping XML theme creation")
+        return
+    
+    # Try to detect existing theme parent
+    existing_parent = detect_existing_theme_parent()
+    
+    if existing_parent:
+        print(f"✓ Using existing theme parent: {existing_parent}")
+        parent_theme = existing_parent
+    else:
+        print("⚠ No existing theme found, using default Material3 parent")
+        parent_theme = "Theme.Material3.DayNight"
+    
+    # Generate theme name from app name or slug
+    theme_name = generate_theme_name(config)
     
     theme_content = f'''<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.{config['slug'].replace('-', '').title()}" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+    <style name="{theme_name}" parent="{parent_theme}">
         <!-- Primary brand color. -->
         <item name="colorPrimary">{config["branding"]["primaryColor"]}</item>
         <item name="colorPrimaryVariant">{config["branding"]["secondaryColor"]}</item>
@@ -446,6 +922,82 @@ def create_theme_xml(config):
     with open(theme_path, 'w') as f:
         f.write(theme_content)
     print("✓ Created theme with brand colors")
+
+def uses_compose_theming():
+    """Check if the project primarily uses Compose theming"""
+    app_module = find_android_app_module()
+    
+    # Check for Compose theme files
+    compose_theme_files = find_compose_theme_files()
+    if compose_theme_files:
+        print(f"📱 Found {len(compose_theme_files)} Compose theme files")
+        return True
+    
+    # Check build.gradle for Compose dependencies
+    build_gradle_path = app_module / 'build.gradle.kts'
+    if not build_gradle_path.exists():
+        build_gradle_path = app_module / 'build.gradle'
+    
+    if build_gradle_path.exists():
+        try:
+            with open(build_gradle_path, 'r') as f:
+                content = f.read()
+            
+            # Look for Compose BOM or Material3 dependencies
+            if ('compose-bom' in content or 
+                'material3' in content or
+                'compose.material3' in content or
+                'androidx.compose.material3' in content):
+                print("📱 Found Compose dependencies in build.gradle")
+                return True
+                
+        except Exception as e:
+            print(f"⚠ Error reading build.gradle: {e}")
+    
+    return False
+
+def detect_existing_theme_parent():
+    """Detect the parent theme being used in existing themes.xml"""
+    theme_path = get_app_source_path('src/main/res/values/themes.xml')
+    
+    if not theme_path.exists():
+        return None
+    
+    try:
+        with open(theme_path, 'r') as f:
+            content = f.read()
+        
+        # Look for style definitions with parent attribute
+        style_matches = re.findall(r'<style[^>]+name="[^"]*"[^>]+parent="([^"]+)"', content)
+        
+        if style_matches:
+            # Return the first parent theme found
+            parent = style_matches[0]
+            print(f"📱 Found existing theme parent: {parent}")
+            return parent
+            
+        # Also check for more complex style definitions
+        multiline_matches = re.findall(r'<style[^>]*parent="([^"]+)"[^>]*>', content)
+        if multiline_matches:
+            parent = multiline_matches[0]
+            print(f"📱 Found existing theme parent: {parent}")
+            return parent
+            
+    except Exception as e:
+        print(f"⚠ Error reading existing themes.xml: {e}")
+    
+    return None
+
+def generate_theme_name(config):
+    """Generate a theme name from config"""
+    if 'slug' in config and config['slug']:
+        # Use slug if available
+        theme_name = config['slug'].replace('-', '').replace('_', '').title()
+        return f"Theme.{theme_name}"
+    else:
+        # Use app name as fallback
+        app_name = config["appName"].replace(' ', '').replace('-', '').replace('_', '')
+        return f"Theme.{app_name}"
 
 def main():
     # Check for command line arguments
