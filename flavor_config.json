@@ -1,0 +1,12 @@
+{
+  "slug": "acme-corp",
+  "clientName": "ACME Corporation",
+  "appName": "ACME Business App",
+  "packageName": "com.acmecorp.business",
+  "branding": {
+    "primaryColor": "#FF6B35",
+    "secondaryColor": "#004E89",
+    "backgroundColor": "#F7F9FC",
+    "logoPath": "samples/assets/logos/fake.png"
+  }
+}

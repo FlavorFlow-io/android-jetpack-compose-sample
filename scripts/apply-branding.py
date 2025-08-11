@@ -10,11 +10,13 @@ import json
 import os
 import re
 import shutil
+import sys
 from pathlib import Path
+from PIL import Image, ImageDraw
 
-def load_config():
+def load_config(file_path):
     """Load the flavor configuration from JSON file"""
-    with open('flavor_config.json', 'r') as f:
+    with open(file_path, 'r') as f:
         return json.load(f)
 
 def update_app_name(config):
@@ -217,15 +219,6 @@ def generate_app_icons(config):
     if not logo_path.exists():
         print(f"⚠ Logo file not found: {logo_path}")
         return
-    
-    # Import Pillow for image processing
-    try:
-        from PIL import Image, ImageDraw
-    except ImportError:
-        print("⚠ Pillow not installed. Installing...")
-        import subprocess
-        subprocess.check_call(['pip', 'install', 'Pillow'])
-        from PIL import Image, ImageDraw
     
     # Generate launcher icons
     generate_launcher_icons(logo_path, config)
@@ -455,10 +448,23 @@ def create_theme_xml(config):
     print("✓ Created theme with brand colors")
 
 def main():
+    # Check for command line arguments
+    if len(sys.argv) > 1:
+        file_path = sys.argv[1]
+    else:
+        file_path = 'flavor_config.json'  # Default fallback
+    
+    # Check if file exists
+    if not Path(file_path).exists():
+        print(f"❌ Configuration file not found: {file_path}")
+        print("Usage: python apply-branding.py [config_file.json]")
+        sys.exit(1)
+    
     print("🎨 Applying branding configuration...")
+    print(f"📄 Using config file: {file_path}")
     
     # Load configuration
-    config = load_config()
+    config = load_config(file_path)
     
     print(f"📱 Client: {config['clientName']}")
     print(f"📱 App Name: {config['appName']}")
@@ -471,7 +477,7 @@ def main():
     update_colors(config)
     update_package_name(config)
     restructure_source_directories(config)
-    copy_logo(config)
+    generate_app_icons(config)
     create_theme_xml(config)
     
     print("\n✅ Branding applied successfully!")
