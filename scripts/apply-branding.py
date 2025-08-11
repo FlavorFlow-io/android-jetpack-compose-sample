@@ -512,6 +512,17 @@ def restructure_source_directories(config):
     new_package = config["packageName"]
     new_package_path = new_package.replace('.', '/')
     
+    # First, get the old package name by examining existing files
+    old_package = detect_old_package_name(app_module, source_dirs)
+    
+    if old_package and old_package != new_package:
+        print(f"🔄 Detected old package: {old_package}")
+        print(f"🔄 Updating to new package: {new_package}")
+        
+        # Update all source files with package references (not just moving files)
+        update_all_package_references(app_module, source_dirs, old_package, new_package)
+    
+    # Then handle the directory restructuring
     for source_dir in source_dirs:
         source_path = app_module / source_dir
         if not source_path.exists():
@@ -531,6 +542,101 @@ def restructure_source_directories(config):
             new_package_dir = source_path / new_package_path
             os.makedirs(new_package_dir, exist_ok=True)
             print(f"✓ Created new package directory: {new_package_dir}")
+
+def detect_old_package_name(app_module, source_dirs):
+    """Detect the current package name from existing source files"""
+    for source_dir in source_dirs:
+        package_name = find_package_in_directory(app_module / source_dir)
+        if package_name:
+            return package_name
+    return None
+
+def find_package_in_directory(source_path):
+    """Find package name in a specific directory"""
+    if not source_path.exists():
+        return None
+        
+    # Look for any source file to extract package name
+    for file_path in source_path.rglob('*'):
+        if file_path.is_file() and file_path.suffix in SOURCE_EXTENSIONS:
+            package_name = extract_package_from_file(file_path)
+            if package_name:
+                return package_name
+    return None
+
+def extract_package_from_file(file_path):
+    """Extract package name from a single source file"""
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
+        
+        # Extract package declaration
+        package_match = re.search(r'^package\s+([a-zA-Z][a-zA-Z0-9_.]*)', content, re.MULTILINE)
+        return package_match.group(1) if package_match else None
+        
+    except Exception as e:
+        print(f"⚠ Error reading {file_path}: {e}")
+        return None
+
+def update_all_package_references(app_module, source_dirs, old_package, new_package):
+    """Update package references in all source files"""
+    print(f"🔄 Updating package references from {old_package} to {new_package} in all files...")
+    
+    files_updated = 0
+    
+    for source_dir in source_dirs:
+        files_updated += update_references_in_directory(app_module / source_dir, old_package, new_package)
+    
+    print(f"✓ Updated package references in {files_updated} files")
+
+def update_references_in_directory(source_path, old_package, new_package):
+    """Update package references in all files within a directory"""
+    if not source_path.exists():
+        return 0
+        
+    files_updated = 0
+    
+    # Process all source files in this directory
+    for file_path in source_path.rglob('*'):
+        if file_path.is_file() and file_path.suffix in SOURCE_EXTENSIONS:
+            if update_references_in_file(file_path, old_package, new_package):
+                files_updated += 1
+                print(f"    ✓ Updated references in {file_path.name}")
+    
+    return files_updated
+
+def update_references_in_file(file_path, old_package, new_package):
+    """Update package references in a single file"""
+    try:
+        with open(file_path, 'r') as f:
+            original_content = f.read()
+        
+        # Update package references
+        updated_content = update_package_references_in_content(original_content, old_package, new_package)
+        
+        # Only write if content changed
+        if updated_content != original_content:
+            with open(file_path, 'w') as f:
+                f.write(updated_content)
+            return True
+            
+    except Exception as e:
+        print(f"    ⚠ Error updating {file_path}: {e}")
+    
+    return False
+
+def update_package_references_in_content(content, old_package, new_package):
+    """Update package references in file content without changing package declaration"""
+    # Update import statements
+    content = update_import_statements(content, old_package, new_package)
+    
+    # Update inline class references
+    content = update_inline_class_references(content, old_package, new_package)
+    
+    # Update string literals
+    content = update_string_literals(content, old_package, new_package)
+    
+    return content
 
 def find_existing_packages(source_path):
     """Find existing package directories that contain source files"""
@@ -589,11 +695,74 @@ def move_source_files(old_package_dir, new_package_dir, new_package):
         print(f"  🗑️ Cleaned up old package structure starting from {old_package_root}")
 
 def update_package_declaration(content, new_package):
-    """Update package declaration in source files"""
-    # Update package declaration
-    pattern = r'^package\s+[a-zA-Z][a-zA-Z0-9_.]*'
-    replacement = f'package {new_package}'
+    """Update package declaration and all references to old package in source files"""
+    # First, extract the old package name from the current content
+    old_package_match = re.search(r'^package\s+([a-zA-Z][a-zA-Z0-9_.]*)', content, re.MULTILINE)
+    old_package = old_package_match.group(1) if old_package_match else None
+    
+    if old_package and old_package != new_package:
+        print(f"    🔄 Updating package references from {old_package} to {new_package}")
+        
+        # Update package declaration
+        content = re.sub(
+            r'^package\s+[a-zA-Z][a-zA-Z0-9_.]*',
+            f'package {new_package}',
+            content,
+            flags=re.MULTILINE
+        )
+        
+        # Update import statements
+        content = update_import_statements(content, old_package, new_package)
+        
+        # Update inline class references (e.g., R.string.app_name -> new.package.R.string.app_name)
+        content = update_inline_class_references(content, old_package, new_package)
+        
+        # Update any string literals that contain the old package (e.g., in manifests or configurations)
+        content = update_string_literals(content, old_package, new_package)
+    
+    return content
+
+def update_import_statements(content, old_package, new_package):
+    """Update import statements that reference the old package"""
+    # Update direct imports of the old package
+    pattern = r'^import\s+' + re.escape(old_package) + r'(\.[\w.]*)?'
+    replacement = f'import {new_package}\\1'
     content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+    
+    # Update static imports
+    pattern = r'^import\s+static\s+' + re.escape(old_package) + r'(\.[\w.]*)?'
+    replacement = f'import static {new_package}\\1'
+    content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+    
+    return content
+
+def update_inline_class_references(content, old_package, new_package):
+    """Update inline references to classes from the old package"""
+    # Simply replace any occurrence of the old package with the new package
+    content = content.replace(old_package, new_package)
+    
+    return content
+
+def update_string_literals(content, old_package, new_package):
+    """Update string literals that contain the old package name"""
+    # Update package name in string literals (common in manifest files, configurations, etc.)
+    # Be careful to only replace when it's clearly a package reference
+    patterns = [
+        # Quoted package names
+        (f'"{re.escape(old_package)}"', f'"{new_package}"'),
+        (f"'{re.escape(old_package)}'", f"'{new_package}'"),
+        
+        # Package names in XML attributes (for AndroidManifest.xml, etc.)
+        (f'package="{re.escape(old_package)}"', f'package="{new_package}"'),
+        (f"package='{re.escape(old_package)}'", f"package='{new_package}'"),
+        
+        # Application ID references
+        (f'applicationId\\s*=\\s*"{re.escape(old_package)}"', f'applicationId = "{new_package}"'),
+        (f"applicationId\\s*=\\s*'{re.escape(old_package)}'", f"applicationId = '{new_package}'"),
+    ]
+    
+    for pattern, replacement in patterns:
+        content = re.sub(pattern, replacement, content)
     
     return content
 
