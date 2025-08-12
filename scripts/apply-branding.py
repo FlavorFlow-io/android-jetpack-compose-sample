@@ -510,6 +510,10 @@ def create_compose_theme_file(theme_dir, config, package_name=None):
     
     app_name = config["appName"].replace(' ', '')
     
+    primary_color = hex_to_compose_color(config["branding"]["primaryColor"])
+    secondary_color = hex_to_compose_color(config["branding"]["secondaryColor"])
+    background_color = hex_to_compose_color(config["branding"]["backgroundColor"])
+    
     theme_content = f'''package {package_name}
 
 import android.app.Activity
@@ -522,22 +526,23 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val LightColorScheme = lightColorScheme(
-    primary = LightPrimary,
-    secondary = LightSecondary,
-    background = LightBackground,
+    primary = Color({primary_color}),
+    secondary = Color({secondary_color}),
+    background = Color({background_color}),
     // Add more colors as needed
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = DarkPrimary,
-    secondary = DarkSecondary,
-    background = DarkBackground,
+    primary = Color({primary_color}),
+    secondary = Color({secondary_color}),
+    background = Color(0xFF121212),
     // Add more colors as needed
 )
 
@@ -1584,11 +1589,14 @@ def main():
     print(f"🎨 Colors: {config['branding']['primaryColor']}, {config['branding']['secondaryColor']}")
     print()
     
-    # Apply branding changes
-    update_app_name(config)
-    update_colors(config)
+    # Apply branding changes in the correct order
+    # 1. First update package references everywhere
     update_package_name(config)
     restructure_source_directories(config)
+    
+    # 2. Then update content that depends on the new package structure
+    update_app_name(config)
+    update_colors(config)
     generate_app_icons(config)
     create_theme_xml(config)
     
