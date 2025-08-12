@@ -9,7 +9,6 @@ the flavor configuration JSON file.
 import json
 import os
 import re
-import shutil
 import sys
 from pathlib import Path
 from PIL import Image, ImageDraw

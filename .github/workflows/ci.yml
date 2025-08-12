@@ -94,6 +94,7 @@ jobs:
     - name: Apply Branding
       if: ${{ inputs.flavor_slug != '' }}
       run: |
+        pip install -r scripts/requirements.txt
         # Make the Python script executable
         chmod +x scripts/apply-branding.py
         
