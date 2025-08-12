@@ -9,6 +9,7 @@ the flavor configuration JSON file.
 import json
 import os
 import re
+import shutil
 import sys
 from pathlib import Path
 from PIL import Image, ImageDraw
@@ -413,6 +414,7 @@ def create_compose_theme_files(config):
             theme_dir = main_source_dir / package_path / 'ui' / 'theme'
             package_with_subdir = f'{config["packageName"]}.ui'
     
+    print(f"📁 Using theme directory: {theme_dir}")
     os.makedirs(theme_dir, exist_ok=True)
     
     # Create Color.kt file
@@ -638,9 +640,14 @@ def update_package_name(config):
         replacement = f'applicationId = "{config["packageName"]}"'
         content = re.sub(pattern, replacement, content)
         
+        # Replace namespace (for newer Gradle versions)
+        namespace_pattern = r'namespace\s*[=:]\s*["\'][^"\']*["\']'
+        namespace_replacement = f'namespace = "{config["packageName"]}"'
+        content = re.sub(namespace_pattern, namespace_replacement, content)
+        
         with open(build_gradle_path, 'w') as f:
             f.write(content)
-        print(f"✓ Updated package name in build.gradle to: {config['packageName']}")
+        print(f"✓ Updated package name and namespace in build.gradle to: {config['packageName']}")
     
     # Update AndroidManifest.xml
     manifest_path = get_app_source_path('src/main/AndroidManifest.xml')
@@ -681,8 +688,8 @@ def restructure_source_directories(config):
         print(f"🔄 Detected old package: {old_package}")
         print(f"🔄 Updating to new package: {new_package}")
         
-        # Update all source files with package references (not just moving files)
-        update_all_package_references(app_module, source_dirs, old_package, new_package)
+        # Update all files with package references throughout the entire project
+        update_all_package_references(app_module, old_package, new_package)
     
     # Then handle the directory restructuring
     for source_dir in source_dirs:
@@ -692,18 +699,130 @@ def restructure_source_directories(config):
             
         print(f"🔄 Processing {source_path}...")
         
-        # Find existing package structure
-        existing_packages = find_existing_packages(source_path)
+        # Find the old package root directory
+        old_package_root = find_old_package_root_in_source(source_path, old_package)
         
-        if existing_packages:
-            # Move files from old package structure to new one
-            for old_package_dir in existing_packages:
-                move_source_files(old_package_dir, source_path / new_package_path, new_package)
+        if old_package_root and old_package_root.exists():
+            # Calculate new package root
+            new_package_root = source_path / new_package_path
+            
+            # Move the entire package structure preserving subdirectories
+            move_package_structure(old_package_root, new_package_root, new_package)
         else:
             # No existing packages found, create the new structure
             new_package_dir = source_path / new_package_path
             os.makedirs(new_package_dir, exist_ok=True)
             print(f"✓ Created new package directory: {new_package_dir}")
+
+def find_old_package_root_in_source(source_path, old_package):
+    """Find the root directory of the old package in a source directory"""
+    if not old_package:
+        return None
+    
+    # Try direct path first
+    old_package_path = old_package.replace('.', '/')
+    old_package_root = source_path / old_package_path
+    
+    if old_package_root.exists():
+        return old_package_root
+    
+    # If direct path doesn't exist, search for files with the old package
+    return find_package_root_from_files(source_path, old_package)
+
+def find_package_root_from_files(source_path, old_package):
+    """Find package root by examining source files"""
+    for file_path in source_path.rglob('*.kt'):
+        if file_path.is_file():
+            package_root = extract_package_root_from_file(file_path, old_package)
+            if package_root:
+                return package_root
+    return None
+
+def extract_package_root_from_file(file_path, old_package):
+    """Extract package root directory from a single file"""
+    try:
+        with open(file_path, 'r') as f:
+            content = f.read()
+        
+        package_match = re.search(PACKAGE_PATTERN, content, re.MULTILINE)
+        if package_match and package_match.group(1).startswith(old_package):
+            package_name = package_match.group(1)
+            relative_package = package_name[len(old_package):].lstrip('.')
+            
+            if relative_package:
+                # File is in a subdirectory, walk up to find package root
+                return walk_up_to_package_root(file_path, relative_package)
+            else:
+                # File is in the root package
+                return file_path.parent
+                
+    except Exception as e:
+        print(f"⚠ Error reading {file_path}: {e}")
+    
+    return None
+
+def walk_up_to_package_root(file_path, relative_package):
+    """Walk up directory tree to find package root"""
+    current_dir = file_path.parent
+    levels = len(relative_package.split('.'))
+    
+    for _ in range(levels):
+        if current_dir.parent != current_dir:
+            current_dir = current_dir.parent
+        else:
+            break
+    
+    return current_dir
+
+def move_package_structure(old_package_root, new_package_root, new_package):
+    """Move entire package structure while preserving subdirectories"""
+    if not old_package_root.exists():
+        return
+    
+    print(f"  🔄 Moving package structure from {old_package_root} to {new_package_root}")
+    
+    # Create new package root
+    os.makedirs(new_package_root, exist_ok=True)
+    
+    # Move all contents recursively
+    moved_items = 0
+    
+    for item in old_package_root.rglob('*'):
+        if item.is_file():
+            # Calculate relative path from old package root
+            relative_path = item.relative_to(old_package_root)
+            new_item_path = new_package_root / relative_path
+            
+            # Create directory structure if needed
+            os.makedirs(new_item_path.parent, exist_ok=True)
+            
+            if item.suffix in SOURCE_EXTENSIONS:
+                # Update source files
+                with open(item, 'r') as f:
+                    content = f.read()
+                
+                # Update package declaration preserving subdirectory
+                content = update_package_declaration_with_subdir(content, new_package, relative_path.parent)
+                
+                # Write to new location
+                with open(new_item_path, 'w') as f:
+                    f.write(content)
+                
+                print(f"    ✓ Moved {relative_path} with updated package")
+            else:
+                # Copy non-source files as-is
+                import shutil
+                shutil.copy2(item, new_item_path)
+                print(f"    ✓ Copied {relative_path}")
+            
+            moved_items += 1
+            # Remove old file
+            item.unlink()
+    
+    if moved_items > 0:
+        # Clean up old empty directories
+        cleanup_old_package_structure(old_package_root)
+        print(f"  ✅ Moved {moved_items} items preserving directory structure")
 
 def detect_old_package_name(app_module, source_dirs):
     """Detect the current package name from existing source files"""
@@ -740,16 +859,73 @@ def extract_package_from_file(file_path):
         print(f"⚠ Error reading {file_path}: {e}")
         return None
 
-def update_all_package_references(app_module, source_dirs, old_package, new_package):
-    """Update package references in all source files"""
-    print(f"🔄 Updating package references from {old_package} to {new_package} in all files...")
+def update_all_package_references(app_module, old_package, new_package):
+    """Update package references in all files throughout the entire project"""
+    print(f"🔄 Updating package references from {old_package} to {new_package} in all project files...")
+    
+    # Start from the project root directory (parent of app module)
+    project_root = app_module.parent if app_module.name != '.' else Path('.')
     
     files_updated = 0
     
-    for source_dir in source_dirs:
-        files_updated += update_references_in_directory(app_module / source_dir, old_package, new_package)
+    # Process all text files in the entire project
+    for file_path in project_root.rglob('*'):
+        if file_path.is_file() and is_text_file(file_path):
+            if update_package_references_in_any_file(file_path, old_package, new_package):
+                files_updated += 1
+                print(f"    ✓ Updated references in {file_path.relative_to(project_root)}")
     
-    print(f"✓ Updated package references in {files_updated} files")
+    print(f"✓ Updated package references in {files_updated} files across the entire project")
+
+def is_text_file(file_path):
+    """Check if a file is a text file that might contain package references"""
+    # Skip binary files and certain directories
+    skip_patterns = [
+        '.git', '.gradle', 'build', 'bin', 'obj', 'target', 'out',
+        'node_modules', '.idea', '.vscode', '__pycache__', 'dist'
+    ]
+    
+    # Check if file is in a directory we should skip
+    for part in file_path.parts:
+        if part in skip_patterns:
+            return False
+    
+    # Check file extensions that typically contain text
+    text_extensions = {
+        '.kt', '.java', '.xml', '.json', '.gradle', '.kts', '.properties',
+        '.md', '.txt', '.yml', '.yaml', '.toml', '.pro', '.cfg', '.conf',
+        '.sh', '.bat', '.py', '.js', '.ts', '.html', '.css', '.scss'
+    }
+    
+    # Check if file has a text extension
+    if file_path.suffix.lower() in text_extensions:
+        return True
+    
+    # Check if file has no extension but might be text (like gradlew)
+    if not file_path.suffix and file_path.name in ['gradlew', 'Dockerfile', 'Makefile']:
+        return True
+    
+    return False
+
+def update_package_references_in_any_file(file_path, old_package, new_package):
+    """Update package references in any file (simplified global replace)"""
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            original_content = f.read()
+        
+        # Simple string replacement of old package with new package
+        updated_content = original_content.replace(old_package, new_package)
+        
+        # Only write if content changed
+        if updated_content != original_content:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(updated_content)
+            return True
+            
+    except Exception as e:
+        print(f"    ⚠ Error updating {file_path}: {e}")
+    
+    return False
 
 def update_references_in_directory(source_path, old_package, new_package):
     """Update package references in all files within a directory"""
@@ -818,34 +994,50 @@ def find_existing_packages(source_path):
     return existing_packages
 
 def move_source_files(old_package_dir, new_package_dir, new_package):
-    """Move source files and update package declarations"""
+    """Move source files and update package declarations while preserving subdirectory structure"""
     if not old_package_dir.exists():
         return
+    
+    print(f"  🔄 Moving files from {old_package_dir} to {new_package_dir}")
     
     # Create new package directory
     os.makedirs(new_package_dir, exist_ok=True)
     
-    # Move all source files
+    # Move all files and subdirectories recursively
     moved_files = []
-    for file_path in old_package_dir.glob('*'):
-        if file_path.is_file() and file_path.suffix in SOURCE_EXTENSIONS:
-            # Read file content
-            with open(file_path, 'r') as f:
-                content = f.read()
+    
+    for item in old_package_dir.rglob('*'):
+        if item.is_file():
+            # Calculate relative path from old package dir
+            relative_path = item.relative_to(old_package_dir)
+            new_file_path = new_package_dir / relative_path
             
-            # Update package declaration
-            content = update_package_declaration(content, new_package)
+            # Create directory structure if needed
+            os.makedirs(new_file_path.parent, exist_ok=True)
             
-            # Write to new location
-            new_file_path = new_package_dir / file_path.name
-            with open(new_file_path, 'w') as f:
-                f.write(content)
-            
-            print(f"  ✓ Moved {file_path.name} to {new_package_dir}")
-            moved_files.append(file_path.name)
+            if item.suffix in SOURCE_EXTENSIONS:
+                # Read and update source files
+                with open(item, 'r') as f:
+                    content = f.read()
+                
+                # Update package declaration to preserve subdirectory structure
+                content = update_package_declaration_with_subdir(content, new_package, relative_path.parent)
+                
+                # Write to new location
+                with open(new_file_path, 'w') as f:
+                    f.write(content)
+                
+                print(f"    ✓ Moved {relative_path} with updated package")
+                moved_files.append(str(relative_path))
+            else:
+                # Copy non-source files as-is
+                import shutil
+                shutil.copy2(item, new_file_path)
+                print(f"    ✓ Copied {relative_path}")
+                moved_files.append(str(relative_path))
             
             # Remove old file
-            file_path.unlink()
+            item.unlink()
     
     if moved_files:
         # Get the root of the old package structure to clean up
@@ -855,6 +1047,43 @@ def move_source_files(old_package_dir, new_package_dir, new_package):
         cleanup_old_package_structure(old_package_root)
         
         print(f"  🗑️ Cleaned up old package structure starting from {old_package_root}")
+        print(f"  ✅ Moved {len(moved_files)} files preserving subdirectory structure")
+
+def update_package_declaration_with_subdir(content, new_base_package, subdir_path):
+    """Update package declaration while preserving subdirectory structure"""
+    # Build the full package name including subdirectories
+    if subdir_path and subdir_path.parts:
+        # Convert subdirectory path to package notation
+        subdir_package = '.'.join(subdir_path.parts)
+        full_package = f"{new_base_package}.{subdir_package}"
+    else:
+        full_package = new_base_package
+    
+    # First, extract the old package name from the current content
+    old_package_match = re.search(PACKAGE_PATTERN, content, re.MULTILINE)
+    old_package = old_package_match.group(1) if old_package_match else None
+    
+    if old_package and old_package != full_package:
+        print(f"      🔄 Updating package from {old_package} to {full_package}")
+        
+        # Update package declaration
+        content = re.sub(
+            PACKAGE_PATTERN,
+            f'package {full_package}',
+            content,
+            flags=re.MULTILINE
+        )
+        
+        # Update import statements that reference the old package
+        content = update_import_statements(content, old_package, full_package)
+        
+        # Update inline class references 
+        content = update_inline_class_references(content, old_package, full_package)
+        
+        # Update string literals
+        content = update_string_literals(content, old_package, full_package)
+    
+    return content
 
 def update_package_declaration(content, new_package):
     """Update package declaration and all references to old package in source files"""
@@ -1145,9 +1374,9 @@ def generate_adaptive_background(config):
 def generate_adaptive_icon_xml():
     """Generate adaptive icon XML files"""
     app_module = find_android_app_module()  # This will use cached result
-    
-    # Create drawable-v26 directory (adaptive icons require API 26+)
-    drawable_dir = app_module / 'src/main/res/drawable-v26'
+
+    # Create drawable-anydpi-v26 directory (adaptive icons require API 26+)
+    drawable_dir = app_module / 'src/main/res/mipmap-anydpi-v26'
     os.makedirs(drawable_dir, exist_ok=True)
     
     # Generate ic_launcher.xml
