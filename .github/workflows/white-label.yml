@@ -7,34 +7,23 @@ on:
   workflow_dispatch:
 
 jobs:
-  #  # 1. Job para buscar a lista de flavors da API (comentado - usando arquivo local)
-  #  fetch-flavors:
-  #    runs-on: ubuntu-latest
-  #    outputs:
-  #      matrix: ${{ steps.get_flavors.outputs.matrix }}
-  #    steps:
-  #      - name: Fetch Flavors from FlavorFlow API
-  #        id: get_flavors
-  #        # Esta é a sua Action customizada
-  #        uses: your-org/flavorflow-action@v1
-  #        with:
-  #          api_key: ${{ secrets.FLAVORFLOW_API_KEY }}
-  #          project_id: "a1b2c3d4-e5f6-..." # ID do seu projeto no FlavorFlow
-
-  # 1. Job para ler flavors de arquivo local JSON
+  # 1. Job para ler flavors da API
   fetch-flavors:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.get_flavors.outputs.matrix }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         
-      - name: Get Flavors from local JSON
+      - name: Get Flavors from API
         id: get_flavors
         run: |
-          # Lê o arquivo JSON local e define como output
-          FLAVORS_JSON=$(cat samples/flavors-sample.json)
+          # Faz a chamada direta para a API
+          FLAVORS_JSON=$(curl -X GET \
+            -H "Authorization: Bearer ${{ secrets.FLAVORFLOW_API_KEY }}" \
+            -H "Accept: application/json" \
+            https://ilesfsxvmvavrlmojmba.supabase.co/functions/v1/project-flavors)
           echo "matrix=$FLAVORS_JSON" >> $GITHUB_OUTPUT
 
   # 2. Job que roda em matriz, um para cada flavor
@@ -43,19 +32,19 @@ jobs:
     
     strategy:
       fail-fast: false
-      # O JSON da Action é injetado aqui dinamicamente
+      # O JSON da API é injetado aqui dinamicamente
       matrix:
-        flavor: ${{ fromJson(needs.fetch-flavors.outputs.matrix).flavors }} # ex: [{slug: 'cliente-a'}, {slug: 'cliente-b'}]
+        flavor: ${{ fromJson(needs.fetch-flavors.outputs.matrix).flavors }}
 
     uses: ./.github/workflows/ci.yml
     with:
-      flavor_slug: ${{ matrix.flavor.slug }}
-      client_name: ${{ matrix.flavor.clientName }}
-      app_name: ${{ matrix.flavor.appName }}
-      package_name: ${{ matrix.flavor.packageName }}
-      primary_color: ${{ matrix.flavor.branding.primaryColor }}
-      secondary_color: ${{ matrix.flavor.branding.secondaryColor }}
-      background_color: ${{ matrix.flavor.branding.backgroundColor }}
-      logo_path: ${{ matrix.flavor.branding.logoPath }}
+      flavor_slug: ${{ matrix.flavor.id }}
+      client_name: ${{ matrix.flavor.name }}
+      app_name: ${{ matrix.flavor.app_name }}
+      package_name: ${{ matrix.flavor.package_name }}
+      primary_color: ${{ matrix.flavor.theme.light.primary }}
+      secondary_color: ${{ matrix.flavor.theme.light.secondary }}
+      background_color: ${{ matrix.flavor.theme.light.background }}
+      logo_path: ${{ matrix.flavor.logo_url }}
     secrets:
       FLAVORFLOW_API_KEY: ${{ secrets.FLAVORFLOW_API_KEY }}

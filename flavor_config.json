@@ -4,9 +4,16 @@
   "appName": "ACME Business App",
   "packageName": "com.acmecorp.business",
   "branding": {
-    "primaryColor": "#FF6B35",
-    "secondaryColor": "#004E89",
-    "backgroundColor": "#F7F9FC",
+    "primaryColor": "#FF0000",
+    "onPrimaryColor": "#FFFFFF",
+    "secondaryColor": "#00FF00",
+    "onSecondaryColor": "#FFFFFF",
+    "tertiaryColor": "#0000FF",
+    "onTertiaryColor": "#FFFFFF",
+    "backgroundColor": "#EEEEEE",
+    "onBackgroundColor": "#1C1B1F",
+    "surfaceColor": "#FFFBFE",
+    "onSurfaceColor": "#1C1B1F",
     "logoPath": "samples/assets/logos/fake.png"
   }
 }
