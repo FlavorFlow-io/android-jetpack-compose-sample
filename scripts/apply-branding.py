@@ -317,16 +317,167 @@ def get_package_from_directory_structure(existing_structure, main_source_dir, ba
 
 def update_existing_compose_theme(theme_file, config):
     """Update existing Compose theme file"""
-    with open(theme_file, 'r') as f:
-        content = f.read()
+    # Check if this is a Color.kt file - if so, append new color variables
+    if theme_file.name.lower() == 'color.kt':
+        print(f"🔄 Appending new color variables to Color.kt: {theme_file}")
+        
+        # Read existing content
+        with open(theme_file, 'r') as f:
+            existing_content = f.read()
+        
+        # Generate new color variables
+        primary_color = hex_to_compose_color(config["branding"]["primaryColor"])
+        secondary_color = hex_to_compose_color(config["branding"]["secondaryColor"])
+        background_color = hex_to_compose_color(config["branding"]["backgroundColor"])
+        
+        # Check if our variables already exist to avoid duplicates
+        has_primary = 'val Primary = Color(' in existing_content
+        has_light_primary = 'val LightPrimary = Color(' in existing_content
+        has_dark_primary = 'val DarkPrimary = Color(' in existing_content
+        
+        # Build new color variables to append
+        new_variables = []
+        
+        if not has_primary:
+            new_variables.extend([
+                f'val Primary = Color({primary_color})',
+                f'val Secondary = Color({secondary_color})',
+                f'val Background = Color({background_color})',
+                ''
+            ])
+        
+        if not has_light_primary:
+            new_variables.extend([
+                '// Light theme colors',
+                f'val LightPrimary = Color({primary_color})',
+                f'val LightSecondary = Color({secondary_color})',
+                f'val LightBackground = Color({background_color})',
+                ''
+            ])
+        
+        if not has_dark_primary:
+            new_variables.extend([
+                '// Dark theme colors (you can customize these)',
+                f'val DarkPrimary = Color({primary_color})',
+                f'val DarkSecondary = Color({secondary_color})',
+                'val DarkBackground = Color(0xFF121212)',
+                ''
+            ])
+        
+       
+        
+        if new_variables:
+            # Append new variables to existing content
+            updated_content = existing_content.rstrip() + '\n\n' + '\n'.join(new_variables) + '\n'
+            
+            # Write the updated content
+            with open(theme_file, 'w') as f:
+                f.write(updated_content)
+                
+            print(f"✓ Appended {len([v for v in new_variables if v.startswith('val')])} new color variables to Color.kt")
+        else:
+            print("✓ All required color variables already exist in Color.kt")
+            
+            # Even if variables exist, update their values with new branding colors
+            with open(theme_file, 'r') as f:
+                content = f.read()
+            
+            content = update_compose_colors(content, config)
+            
+            with open(theme_file, 'w') as f:
+                f.write(content)
+            
+    else:
+        # For other theme files, try to update using patterns
+        with open(theme_file, 'r') as f:
+            content = f.read()
+        
+        # Check if this is a Theme.kt file - handle it specially too
+        if theme_file.name.lower() == 'theme.kt':
+            print(f"🔄 Updating Theme.kt to use proper color variables: {theme_file}")
+            
+            # Update Theme.kt to use our standard color variables
+            content = update_theme_kt_colors(content, config)
+        else:
+            # Update color definitions based on common patterns
+            content = update_compose_colors(content, config)
+        
+        with open(theme_file, 'w') as f:
+            f.write(content)
+        
+        print(f"✓ Updated Compose theme file: {theme_file}")
+
+def update_theme_kt_colors(content, config):
+    """Update Theme.kt file to use proper color variable references"""
+    # Suppress unused parameter warning - config might be used in future enhancements
+    _ = config
     
-    # Update color definitions based on common patterns
-    content = update_compose_colors(content, config)
+    # Replace lightColorScheme color assignments to use our variables
+    content = re.sub(
+        r'(lightColorScheme\s*\([^)]*?)primary\s*=\s*[^,)]+',
+        r'\1primary = LightPrimary',
+        content,
+        flags=re.DOTALL
+    )
+    content = re.sub(
+        r'(lightColorScheme\s*\([^)]*?)secondary\s*=\s*[^,)]+',
+        r'\1secondary = LightSecondary',
+        content,
+        flags=re.DOTALL
+    )
+    content = re.sub(
+        r'(lightColorScheme\s*\([^)]*?)background\s*=\s*[^,)]+',
+        r'\1background = LightBackground',
+        content,
+        flags=re.DOTALL
+    )
     
-    with open(theme_file, 'w') as f:
-        f.write(content)
+    # Add background if it doesn't exist in lightColorScheme
+    if 'lightColorScheme(' in content and 'background = LightBackground' not in content:
+        content = re.sub(
+            r'(lightColorScheme\s*\(\s*[^)]*?secondary\s*=\s*[^,)]+)',
+            r'\1,\n    background = LightBackground',
+            content,
+            flags=re.DOTALL
+        )
     
-    print(f"✓ Updated Compose theme file: {theme_file}")
+    # Replace darkColorScheme color assignments to use our variables
+    content = re.sub(
+        r'(darkColorScheme\s*\([^)]*?)primary\s*=\s*[^,)]+',
+        r'\1primary = DarkPrimary',
+        content,
+        flags=re.DOTALL
+    )
+    content = re.sub(
+        r'(darkColorScheme\s*\([^)]*?)secondary\s*=\s*[^,)]+',
+        r'\1secondary = DarkSecondary',
+        content,
+        flags=re.DOTALL
+    )
+    content = re.sub(
+        r'(darkColorScheme\s*\([^)]*?)background\s*=\s*[^,)]+',
+        r'\1background = DarkBackground',
+        content,
+        flags=re.DOTALL
+    )
+    
+    # Add background if it doesn't exist in darkColorScheme
+    if 'darkColorScheme(' in content and 'background = DarkBackground' not in content:
+        content = re.sub(
+            r'(darkColorScheme\s*\(\s*[^)]*?secondary\s*=\s*[^,)]+)',
+            r'\1,\n    background = DarkBackground',
+            content,
+            flags=re.DOTALL
+        )
+    
+    # Set dynamicColor to false by default to use custom colors
+    content = re.sub(
+        r'dynamicColor:\s*Boolean\s*=\s*true',
+        'dynamicColor: Boolean = false, // Set to false to use custom colors',
+        content
+    )
+    
+    return content
 
 def update_compose_colors(content, config):
     """Update color definitions in Compose theme content"""
@@ -339,26 +490,26 @@ def update_compose_colors(content, config):
     secondary_compose = hex_to_compose_color(secondary_color)
     background_compose = hex_to_compose_color(background_color)
     
-    # Update various color patterns
+    # Update various color patterns with more specific regex to avoid corruption
     patterns = [
-        # Standard color definitions
-        (r'val\s+Primary\s*=\s*Color\([^)]+\)', f'val Primary = Color({primary_compose})'),
-        (r'val\s+Secondary\s*=\s*Color\([^)]+\)', f'val Secondary = Color({secondary_compose})'),
-        (r'val\s+Background\s*=\s*Color\([^)]+\)', f'val Background = Color({background_compose})'),
+        # Standard color definitions (exact matches)
+        (r'^val\s+Primary\s*=\s*Color\([^)]+\)', f'val Primary = Color({primary_compose})'),
+        (r'^val\s+Secondary\s*=\s*Color\([^)]+\)', f'val Secondary = Color({secondary_compose})'),
+        (r'^val\s+Background\s*=\s*Color\([^)]+\)', f'val Background = Color({background_compose})'),
         
-        # Material3 color scheme patterns
-        (r'primary\s*=\s*Color\([^)]+\)', f'primary = Color({primary_compose})'),
-        (r'secondary\s*=\s*Color\([^)]+\)', f'secondary = Color({secondary_compose})'),
-        (r'background\s*=\s*Color\([^)]+\)', f'background = Color({background_compose})'),
+        # Light theme color definitions (exact matches)
+        (r'^val\s+LightPrimary\s*=\s*Color\([^)]+\)', f'val LightPrimary = Color({primary_compose})'),
+        (r'^val\s+LightSecondary\s*=\s*Color\([^)]+\)', f'val LightSecondary = Color({secondary_compose})'),
+        (r'^val\s+LightBackground\s*=\s*Color\([^)]+\)', f'val LightBackground = Color({background_compose})'),
         
-        # Custom color definitions
-        (r'val\s+primaryColor\s*=\s*Color\([^)]+\)', f'val primaryColor = Color({primary_compose})'),
-        (r'val\s+secondaryColor\s*=\s*Color\([^)]+\)', f'val secondaryColor = Color({secondary_compose})'),
-        (r'val\s+backgroundColor\s*=\s*Color\([^)]+\)', f'val backgroundColor = Color({background_compose})'),
+        # Dark theme color definitions (exact matches, keep DarkBackground as dark)
+        (r'^val\s+DarkPrimary\s*=\s*Color\([^)]+\)', f'val DarkPrimary = Color({primary_compose})'),
+        (r'^val\s+DarkSecondary\s*=\s*Color\([^)]+\)', f'val DarkSecondary = Color({secondary_compose})'),
+        (r'^val\s+DarkBackground\s*=\s*Color\([^)]+\)', 'val DarkBackground = Color(0xFF121212)'),
     ]
     
     for pattern, replacement in patterns:
-        content = re.sub(pattern, replacement, content, flags=re.IGNORECASE)
+        content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
     
     return content
 
@@ -490,11 +641,6 @@ val LightBackground = Color({background_color})
 val DarkPrimary = Color({primary_color})
 val DarkSecondary = Color({secondary_color})
 val DarkBackground = Color(0xFF121212)
-
-// Additional brand colors
-val BrandPrimary = Color({primary_color})
-val BrandSecondary = Color({secondary_color})
-val BrandBackground = Color({background_color})
 '''
     
     color_file = theme_dir / 'Color.kt'
@@ -510,10 +656,6 @@ def create_compose_theme_file(theme_dir, config, package_name=None):
     
     app_name = config["appName"].replace(' ', '')
     
-    primary_color = hex_to_compose_color(config["branding"]["primaryColor"])
-    secondary_color = hex_to_compose_color(config["branding"]["secondaryColor"])
-    background_color = hex_to_compose_color(config["branding"]["backgroundColor"])
-    
     theme_content = f'''package {package_name}
 
 import android.app.Activity
@@ -526,23 +668,22 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color({primary_color}),
-    secondary = Color({secondary_color}),
-    background = Color({background_color}),
+    primary = LightPrimary,
+    secondary = LightSecondary,
+    background = LightBackground,
     // Add more colors as needed
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Color({primary_color}),
-    secondary = Color({secondary_color}),
-    background = Color(0xFF121212),
+    primary = DarkPrimary,
+    secondary = DarkSecondary,
+    background = DarkBackground,
     // Add more colors as needed
 )
 
