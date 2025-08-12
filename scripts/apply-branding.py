@@ -325,44 +325,103 @@ def update_existing_compose_theme(theme_file, config):
         with open(theme_file, 'r') as f:
             existing_content = f.read()
         
-        # Generate new color variables
+        # Generate new color variables for available MD3 colors only
         primary_color = hex_to_compose_color(config["branding"]["primaryColor"])
         secondary_color = hex_to_compose_color(config["branding"]["secondaryColor"])
         background_color = hex_to_compose_color(config["branding"]["backgroundColor"])
         
-        # Check if our variables already exist to avoid duplicates
-        has_primary = 'val Primary = Color(' in existing_content
-        has_light_primary = 'val LightPrimary = Color(' in existing_content
-        has_dark_primary = 'val DarkPrimary = Color(' in existing_content
+        # Optional colors - only generate if they exist in config
+        on_primary_color = hex_to_compose_color(config["branding"]["onPrimaryColor"]) if "onPrimaryColor" in config["branding"] else None
+        on_secondary_color = hex_to_compose_color(config["branding"]["onSecondaryColor"]) if "onSecondaryColor" in config["branding"] else None
+        tertiary_color = hex_to_compose_color(config["branding"]["tertiaryColor"]) if "tertiaryColor" in config["branding"] else None
+        on_tertiary_color = hex_to_compose_color(config["branding"]["onTertiaryColor"]) if "onTertiaryColor" in config["branding"] else None
+        on_background_color = hex_to_compose_color(config["branding"]["onBackgroundColor"]) if "onBackgroundColor" in config["branding"] else None
+        surface_color = hex_to_compose_color(config["branding"]["surfaceColor"]) if "surfaceColor" in config["branding"] else None
+        on_surface_color = hex_to_compose_color(config["branding"]["onSurfaceColor"]) if "onSurfaceColor" in config["branding"] else None
+        
+        # Simple approach: Always add branded colors with "Brand" prefix
+        # This ensures compatibility with any existing project structure
+        has_brand_colors = '// FlavorFlow Branding Colors' in existing_content
         
         # Build new color variables to append
         new_variables = []
         
-        if not has_primary:
+        if not has_brand_colors:
             new_variables.extend([
-                f'val Primary = Color({primary_color})',
-                f'val Secondary = Color({secondary_color})',
-                f'val Background = Color({background_color})',
+                '',
+                '// FlavorFlow Branding Colors',
+                '// Use these colors in your theme for consistent branding',
+                '',
+                f'val BrandPrimary = Color({primary_color})',
+                f'val BrandSecondary = Color({secondary_color})',
+                f'val BrandBackground = Color({background_color})',
                 ''
             ])
-        
-        if not has_light_primary:
+            
+            # Add optional colors if they exist in config
+            if on_primary_color:
+                new_variables.insert(-1, f'val BrandOnPrimary = Color({on_primary_color})')
+            if on_secondary_color:
+                new_variables.insert(-1, f'val BrandOnSecondary = Color({on_secondary_color})')
+            if tertiary_color:
+                new_variables.insert(-1, f'val BrandTertiary = Color({tertiary_color})')
+            if on_tertiary_color:
+                new_variables.insert(-1, f'val BrandOnTertiary = Color({on_tertiary_color})')
+            if on_background_color:
+                new_variables.insert(-1, f'val BrandOnBackground = Color({on_background_color})')
+            if surface_color:
+                new_variables.insert(-1, f'val BrandSurface = Color({surface_color})')
+            if on_surface_color:
+                new_variables.insert(-1, f'val BrandOnSurface = Color({on_surface_color})')
+            
+            # Add light and dark variants
             new_variables.extend([
-                '// Light theme colors',
-                f'val LightPrimary = Color({primary_color})',
-                f'val LightSecondary = Color({secondary_color})',
-                f'val LightBackground = Color({background_color})',
+                '// Light theme variants',
+                f'val BrandLightPrimary = Color({primary_color})',
+                f'val BrandLightSecondary = Color({secondary_color})',
+                f'val BrandLightBackground = Color({background_color})',
                 ''
             ])
-        
-        if not has_dark_primary:
+            
+            if on_primary_color:
+                new_variables.insert(-1, f'val BrandLightOnPrimary = Color({on_primary_color})')
+            if on_secondary_color:
+                new_variables.insert(-1, f'val BrandLightOnSecondary = Color({on_secondary_color})')
+            if tertiary_color:
+                new_variables.insert(-1, f'val BrandLightTertiary = Color({tertiary_color})')
+            if on_tertiary_color:
+                new_variables.insert(-1, f'val BrandLightOnTertiary = Color({on_tertiary_color})')
+            if on_background_color:
+                new_variables.insert(-1, f'val BrandLightOnBackground = Color({on_background_color})')
+            if surface_color:
+                new_variables.insert(-1, f'val BrandLightSurface = Color({surface_color})')
+            if on_surface_color:
+                new_variables.insert(-1, f'val BrandLightOnSurface = Color({on_surface_color})')
+            
+            # Dark theme variants with smart defaults
             new_variables.extend([
-                '// Dark theme colors (you can customize these)',
-                f'val DarkPrimary = Color({primary_color})',
-                f'val DarkSecondary = Color({secondary_color})',
-                'val DarkBackground = Color(0xFF121212)',
+                '// Dark theme variants',
+                f'val BrandDarkPrimary = Color({primary_color})',
+                f'val BrandDarkSecondary = Color({secondary_color})',
+                'val BrandDarkBackground = Color(0xFF121212)',
+                'val BrandDarkOnBackground = Color(0xFFFFFFFF)',
                 ''
             ])
+            
+            if on_primary_color:
+                new_variables.insert(-3, f'val BrandDarkOnPrimary = Color({on_primary_color})')
+            if on_secondary_color:
+                new_variables.insert(-3, f'val BrandDarkOnSecondary = Color({on_secondary_color})')
+            if tertiary_color:
+                new_variables.insert(-3, f'val BrandDarkTertiary = Color({tertiary_color})')
+            if on_tertiary_color:
+                new_variables.insert(-3, f'val BrandDarkOnTertiary = Color({on_tertiary_color})')
+            if surface_color:
+                new_variables.extend([
+                    'val BrandDarkSurface = Color(0xFF1C1B1F)',
+                    'val BrandDarkOnSurface = Color(0xFFE6E1E5)',
+                    ''
+                ])
         
        
         
@@ -480,7 +539,8 @@ def update_theme_kt_colors(content, config):
     return content
 
 def update_compose_colors(content, config):
-    """Update color definitions in Compose theme content"""
+    """Update color definitions in Compose theme content - focuses on Brand colors for universal compatibility"""
+    # Get required color values from configuration
     primary_color = config["branding"]["primaryColor"]
     secondary_color = config["branding"]["secondaryColor"]
     background_color = config["branding"]["backgroundColor"]
@@ -490,24 +550,80 @@ def update_compose_colors(content, config):
     secondary_compose = hex_to_compose_color(secondary_color)
     background_compose = hex_to_compose_color(background_color)
     
-    # Update various color patterns with more specific regex to avoid corruption
+    # Build patterns for brand colors (these work with any project)
     patterns = [
-        # Standard color definitions (exact matches)
-        (r'^val\s+Primary\s*=\s*Color\([^)]+\)', f'val Primary = Color({primary_compose})'),
-        (r'^val\s+Secondary\s*=\s*Color\([^)]+\)', f'val Secondary = Color({secondary_compose})'),
-        (r'^val\s+Background\s*=\s*Color\([^)]+\)', f'val Background = Color({background_compose})'),
+        # Brand color definitions (universal approach)
+        (r'^val\s+BrandPrimary\s*=\s*Color\([^)]+\)', f'val BrandPrimary = Color({primary_compose})'),
+        (r'^val\s+BrandSecondary\s*=\s*Color\([^)]+\)', f'val BrandSecondary = Color({secondary_compose})'),
+        (r'^val\s+BrandBackground\s*=\s*Color\([^)]+\)', f'val BrandBackground = Color({background_compose})'),
         
-        # Light theme color definitions (exact matches)
-        (r'^val\s+LightPrimary\s*=\s*Color\([^)]+\)', f'val LightPrimary = Color({primary_compose})'),
-        (r'^val\s+LightSecondary\s*=\s*Color\([^)]+\)', f'val LightSecondary = Color({secondary_compose})'),
-        (r'^val\s+LightBackground\s*=\s*Color\([^)]+\)', f'val LightBackground = Color({background_compose})'),
+        # Light theme brand variants
+        (r'^val\s+BrandLightPrimary\s*=\s*Color\([^)]+\)', f'val BrandLightPrimary = Color({primary_compose})'),
+        (r'^val\s+BrandLightSecondary\s*=\s*Color\([^)]+\)', f'val BrandLightSecondary = Color({secondary_compose})'),
+        (r'^val\s+BrandLightBackground\s*=\s*Color\([^)]+\)', f'val BrandLightBackground = Color({background_compose})'),
         
-        # Dark theme color definitions (exact matches, keep DarkBackground as dark)
-        (r'^val\s+DarkPrimary\s*=\s*Color\([^)]+\)', f'val DarkPrimary = Color({primary_compose})'),
-        (r'^val\s+DarkSecondary\s*=\s*Color\([^)]+\)', f'val DarkSecondary = Color({secondary_compose})'),
-        (r'^val\s+DarkBackground\s*=\s*Color\([^)]+\)', 'val DarkBackground = Color(0xFF121212)'),
+        # Dark theme brand variants
+        (r'^val\s+BrandDarkPrimary\s*=\s*Color\([^)]+\)', f'val BrandDarkPrimary = Color({primary_compose})'),
+        (r'^val\s+BrandDarkSecondary\s*=\s*Color\([^)]+\)', f'val BrandDarkSecondary = Color({secondary_compose})'),
     ]
     
+    # Add patterns for optional colors if they exist in config
+    branding = config["branding"]
+    
+    if "onPrimaryColor" in branding:
+        on_primary_compose = hex_to_compose_color(branding["onPrimaryColor"])
+        patterns.extend([
+            (r'^val\s+BrandOnPrimary\s*=\s*Color\([^)]+\)', f'val BrandOnPrimary = Color({on_primary_compose})'),
+            (r'^val\s+BrandLightOnPrimary\s*=\s*Color\([^)]+\)', f'val BrandLightOnPrimary = Color({on_primary_compose})'),
+            (r'^val\s+BrandDarkOnPrimary\s*=\s*Color\([^)]+\)', f'val BrandDarkOnPrimary = Color({on_primary_compose})'),
+        ])
+    
+    if "onSecondaryColor" in branding:
+        on_secondary_compose = hex_to_compose_color(branding["onSecondaryColor"])
+        patterns.extend([
+            (r'^val\s+BrandOnSecondary\s*=\s*Color\([^)]+\)', f'val BrandOnSecondary = Color({on_secondary_compose})'),
+            (r'^val\s+BrandLightOnSecondary\s*=\s*Color\([^)]+\)', f'val BrandLightOnSecondary = Color({on_secondary_compose})'),
+            (r'^val\s+BrandDarkOnSecondary\s*=\s*Color\([^)]+\)', f'val BrandDarkOnSecondary = Color({on_secondary_compose})'),
+        ])
+    
+    if "tertiaryColor" in branding:
+        tertiary_compose = hex_to_compose_color(branding["tertiaryColor"])
+        patterns.extend([
+            (r'^val\s+BrandTertiary\s*=\s*Color\([^)]+\)', f'val BrandTertiary = Color({tertiary_compose})'),
+            (r'^val\s+BrandLightTertiary\s*=\s*Color\([^)]+\)', f'val BrandLightTertiary = Color({tertiary_compose})'),
+            (r'^val\s+BrandDarkTertiary\s*=\s*Color\([^)]+\)', f'val BrandDarkTertiary = Color({tertiary_compose})'),
+        ])
+    
+    if "onTertiaryColor" in branding:
+        on_tertiary_compose = hex_to_compose_color(branding["onTertiaryColor"])
+        patterns.extend([
+            (r'^val\s+BrandOnTertiary\s*=\s*Color\([^)]+\)', f'val BrandOnTertiary = Color({on_tertiary_compose})'),
+            (r'^val\s+BrandLightOnTertiary\s*=\s*Color\([^)]+\)', f'val BrandLightOnTertiary = Color({on_tertiary_compose})'),
+            (r'^val\s+BrandDarkOnTertiary\s*=\s*Color\([^)]+\)', f'val BrandDarkOnTertiary = Color({on_tertiary_compose})'),
+        ])
+    
+    if "onBackgroundColor" in branding:
+        on_background_compose = hex_to_compose_color(branding["onBackgroundColor"])
+        patterns.extend([
+            (r'^val\s+BrandOnBackground\s*=\s*Color\([^)]+\)', f'val BrandOnBackground = Color({on_background_compose})'),
+            (r'^val\s+BrandLightOnBackground\s*=\s*Color\([^)]+\)', f'val BrandLightOnBackground = Color({on_background_compose})'),
+        ])
+    
+    if "surfaceColor" in branding:
+        surface_compose = hex_to_compose_color(branding["surfaceColor"])
+        patterns.extend([
+            (r'^val\s+BrandSurface\s*=\s*Color\([^)]+\)', f'val BrandSurface = Color({surface_compose})'),
+            (r'^val\s+BrandLightSurface\s*=\s*Color\([^)]+\)', f'val BrandLightSurface = Color({surface_compose})'),
+        ])
+    
+    if "onSurfaceColor" in branding:
+        on_surface_compose = hex_to_compose_color(branding["onSurfaceColor"])
+        patterns.extend([
+            (r'^val\s+BrandOnSurface\s*=\s*Color\([^)]+\)', f'val BrandOnSurface = Color({on_surface_compose})'),
+            (r'^val\s+BrandLightOnSurface\s*=\s*Color\([^)]+\)', f'val BrandLightOnSurface = Color({on_surface_compose})'),
+        ])
+    
+    # Apply all patterns
     for pattern, replacement in patterns:
         content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
     
@@ -620,28 +736,143 @@ def create_compose_color_file(theme_dir, config, package_name=None):
     else:
         package_name = f'{package_name}.theme'
     
+    # Extract required color values from config
     primary_color = hex_to_compose_color(config["branding"]["primaryColor"])
     secondary_color = hex_to_compose_color(config["branding"]["secondaryColor"])
     background_color = hex_to_compose_color(config["branding"]["backgroundColor"])
     
-    color_content = f'''package {package_name}
-
-import androidx.compose.ui.graphics.Color
-
-val Primary = Color({primary_color})
-val Secondary = Color({secondary_color})
-val Background = Color({background_color})
-
-// Light theme colors
-val LightPrimary = Color({primary_color})
-val LightSecondary = Color({secondary_color})
-val LightBackground = Color({background_color})
-
-// Dark theme colors (you can customize these)
-val DarkPrimary = Color({primary_color})
-val DarkSecondary = Color({secondary_color})
-val DarkBackground = Color(0xFF121212)
-'''
+    # Extract optional color values only if they exist
+    branding = config["branding"]
+    on_primary_color = hex_to_compose_color(branding["onPrimaryColor"]) if "onPrimaryColor" in branding else None
+    on_secondary_color = hex_to_compose_color(branding["onSecondaryColor"]) if "onSecondaryColor" in branding else None
+    tertiary_color = hex_to_compose_color(branding["tertiaryColor"]) if "tertiaryColor" in branding else None
+    on_tertiary_color = hex_to_compose_color(branding["onTertiaryColor"]) if "onTertiaryColor" in branding else None
+    on_background_color = hex_to_compose_color(branding["onBackgroundColor"]) if "onBackgroundColor" in branding else None
+    surface_color = hex_to_compose_color(branding["surfaceColor"]) if "surfaceColor" in branding else None
+    on_surface_color = hex_to_compose_color(branding["onSurfaceColor"]) if "onSurfaceColor" in branding else None
+    
+    # Build color content dynamically based on available colors
+    color_lines = [
+        f'package {package_name}',
+        '',
+        'import androidx.compose.ui.graphics.Color',
+        '',
+        '// Primary colors',
+        f'val Primary = Color({primary_color})'
+    ]
+    
+    if on_primary_color:
+        color_lines.append(f'val OnPrimary = Color({on_primary_color})')
+    
+    color_lines.extend([
+        '',
+        '// Secondary colors',
+        f'val Secondary = Color({secondary_color})'
+    ])
+    
+    if on_secondary_color:
+        color_lines.append(f'val OnSecondary = Color({on_secondary_color})')
+    
+    if tertiary_color:
+        color_lines.extend([
+            '',
+            '// Tertiary colors',
+            f'val Tertiary = Color({tertiary_color})'
+        ])
+        if on_tertiary_color:
+            color_lines.append(f'val OnTertiary = Color({on_tertiary_color})')
+    
+    color_lines.extend([
+        '',
+        '// Background colors',
+        f'val Background = Color({background_color})'
+    ])
+    
+    if on_background_color:
+        color_lines.append(f'val OnBackground = Color({on_background_color})')
+    
+    if surface_color:
+        color_lines.extend([
+            '',
+            '// Surface colors',
+            f'val Surface = Color({surface_color})'
+        ])
+        if on_surface_color:
+            color_lines.append(f'val OnSurface = Color({on_surface_color})')
+    
+    # Light theme colors
+    color_lines.extend([
+        '',
+        '// Light theme colors',
+        f'val LightPrimary = Color({primary_color})',
+        f'val LightSecondary = Color({secondary_color})',
+        f'val LightBackground = Color({background_color})'
+    ])
+    
+    if on_primary_color:
+        color_lines.insert(-2, f'val LightOnPrimary = Color({on_primary_color})')
+    if on_secondary_color:
+        color_lines.insert(-1, f'val LightOnSecondary = Color({on_secondary_color})')
+    if tertiary_color:
+        color_lines.append(f'val LightTertiary = Color({tertiary_color})')
+    if on_tertiary_color:
+        color_lines.append(f'val LightOnTertiary = Color({on_tertiary_color})')
+    if on_background_color:
+        color_lines.append(f'val LightOnBackground = Color({on_background_color})')
+    if surface_color:
+        color_lines.append(f'val LightSurface = Color({surface_color})')
+    if on_surface_color:
+        color_lines.append(f'val LightOnSurface = Color({on_surface_color})')
+    
+    # Dark theme colors
+    color_lines.extend([
+        '',
+        '// Dark theme colors (you can customize these)',
+        f'val DarkPrimary = Color({primary_color})',
+        f'val DarkSecondary = Color({secondary_color})',
+        'val DarkBackground = Color(0xFF121212)',
+        'val DarkOnBackground = Color(0xFFFFFFFF)'
+    ])
+    
+    if on_primary_color:
+        color_lines.insert(-3, f'val DarkOnPrimary = Color({on_primary_color})')
+    if on_secondary_color:
+        color_lines.insert(-3, f'val DarkOnSecondary = Color({on_secondary_color})')
+    if tertiary_color:
+        color_lines.insert(-2, f'val DarkTertiary = Color({tertiary_color})')
+    if on_tertiary_color:
+        color_lines.insert(-2, f'val DarkOnTertiary = Color({on_tertiary_color})')
+    if surface_color:
+        color_lines.extend([
+            'val DarkSurface = Color(0xFF1C1B1F)',
+            'val DarkOnSurface = Color(0xFFE6E1E5)'
+        ])
+    
+    # Brand colors
+    color_lines.extend([
+        '',
+        '// Additional brand colors',
+        f'val BrandPrimary = Color({primary_color})',
+        f'val BrandSecondary = Color({secondary_color})',
+        f'val BrandBackground = Color({background_color})'
+    ])
+    
+    if on_primary_color:
+        color_lines.insert(-2, f'val BrandOnPrimary = Color({on_primary_color})')
+    if on_secondary_color:
+        color_lines.insert(-1, f'val BrandOnSecondary = Color({on_secondary_color})')
+    if tertiary_color:
+        color_lines.append(f'val BrandTertiary = Color({tertiary_color})')
+    if on_tertiary_color:
+        color_lines.append(f'val BrandOnTertiary = Color({on_tertiary_color})')
+    if on_background_color:
+        color_lines.append(f'val BrandOnBackground = Color({on_background_color})')
+    if surface_color:
+        color_lines.append(f'val BrandSurface = Color({surface_color})')
+    if on_surface_color:
+        color_lines.append(f'val BrandOnSurface = Color({on_surface_color})')
+    
+    color_content = '\n'.join(color_lines) + '\n'
     
     color_file = theme_dir / 'Color.kt'
     with open(color_file, 'w') as f:
@@ -655,6 +886,51 @@ def create_compose_theme_file(theme_dir, config, package_name=None):
         package_name = f'{package_name}.theme'
     
     app_name = config["appName"].replace(' ', '')
+    branding = config["branding"]
+    
+    # Build light color scheme dynamically
+    light_colors = [
+        'primary = LightPrimary',
+        'secondary = LightSecondary',
+        'background = LightBackground'
+    ]
+    
+    if "onPrimaryColor" in branding:
+        light_colors.insert(1, 'onPrimary = LightOnPrimary')
+    if "onSecondaryColor" in branding:
+        light_colors.insert(-1, 'onSecondary = LightOnSecondary')
+    if "tertiaryColor" in branding:
+        light_colors.append('tertiary = LightTertiary')
+    if "onTertiaryColor" in branding:
+        light_colors.append('onTertiary = LightOnTertiary')
+    if "onBackgroundColor" in branding:
+        light_colors.append('onBackground = LightOnBackground')
+    if "surfaceColor" in branding:
+        light_colors.append('surface = LightSurface')
+    if "onSurfaceColor" in branding:
+        light_colors.append('onSurface = LightOnSurface')
+    
+    # Build dark color scheme dynamically
+    dark_colors = [
+        'primary = DarkPrimary',
+        'secondary = DarkSecondary',
+        'background = DarkBackground',
+        'onBackground = DarkOnBackground'
+    ]
+    
+    if "onPrimaryColor" in branding:
+        dark_colors.insert(1, 'onPrimary = DarkOnPrimary')
+    if "onSecondaryColor" in branding:
+        dark_colors.insert(-2, 'onSecondary = DarkOnSecondary')
+    if "tertiaryColor" in branding:
+        dark_colors.insert(-2, 'tertiary = DarkTertiary')
+    if "onTertiaryColor" in branding:
+        dark_colors.insert(-2, 'onTertiary = DarkOnTertiary')
+    if "surfaceColor" in branding:
+        dark_colors.extend(['surface = DarkSurface', 'onSurface = DarkOnSurface'])
+    
+    light_scheme = ',\n    '.join(light_colors)
+    dark_scheme = ',\n    '.join(dark_colors)
     
     theme_content = f'''package {package_name}
 
@@ -674,23 +950,17 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val LightColorScheme = lightColorScheme(
-    primary = LightPrimary,
-    secondary = LightSecondary,
-    background = LightBackground,
-    // Add more colors as needed
+    {light_scheme}
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = DarkPrimary,
-    secondary = DarkSecondary,
-    background = DarkBackground,
-    // Add more colors as needed
+    {dark_scheme}
 )
 
 @Composable
 fun {app_name}Theme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false, // Disabled to use custom branding colors
     content: @Composable () -> Unit
 ) {{
     val colorScheme = when {{
@@ -713,7 +983,6 @@ fun {app_name}Theme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
         content = content
     )
 }}
