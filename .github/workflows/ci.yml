@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       flavor_id:
-        description: 'The flavor slug identifier'
+        description: 'The flavor identifier'
         required: true
         type: string
       client_name:

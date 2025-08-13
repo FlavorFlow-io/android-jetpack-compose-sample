@@ -29,13 +29,12 @@ jobs:
   # 2. Job que roda em matriz, um para cada flavor
   build-app:
     needs: fetch-flavors
-    
+    name: Build flavor `${{ matrix.flavor.name }}`
     strategy:
       fail-fast: false
       # O JSON da API é injetado aqui dinamicamente
       matrix:
         flavor: ${{ fromJson(needs.fetch-flavors.outputs.matrix).flavors }}
-
     uses: ./.github/workflows/ci.yml
     with:
       flavor_id: ${{ matrix.flavor.id }}
