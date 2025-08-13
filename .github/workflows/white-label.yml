@@ -43,7 +43,14 @@ jobs:
       package_name: ${{ matrix.flavor.package_name }}
       primary_color: ${{ matrix.flavor.theme.light.primary }}
       secondary_color: ${{ matrix.flavor.theme.light.secondary }}
+      tertiary_color: ${{ matrix.flavor.theme.light.tertiary }}
       background_color: ${{ matrix.flavor.theme.light.background }}
+      surface_color: ${{ matrix.flavor.theme.light.surface }}
+      on_primary_color: ${{ matrix.flavor.theme.light.on_primary }}
+      on_secondary_color: ${{ matrix.flavor.theme.light.on_secondary }}
+      on_tertiary_color: ${{ matrix.flavor.theme.light.on_tertiary }}
+      on_background_color: ${{ matrix.flavor.theme.light.on_background }}
+      on_surface_color: ${{ matrix.flavor.theme.light.on_surface }}
       logo_url: ${{ matrix.flavor.logo_url }}
     secrets:
       FLAVORFLOW_API_KEY: ${{ secrets.FLAVORFLOW_API_KEY }}

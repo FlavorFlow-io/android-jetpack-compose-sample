@@ -27,9 +27,37 @@ on:
         description: 'Secondary brand color'
         required: true
         type: string
+      tertiary_color:
+        description: 'Tertiary brand color'
+        required: false
+        type: string
       background_color:
         description: 'Background color'
         required: true
+        type: string
+      surface_color:
+        description: 'Surface color'
+        required: false
+        type: string
+      on_primary_color:
+        description: 'On primary color'
+        required: false
+        type: string
+      on_secondary_color:
+        description: 'On secondary color'
+        required: false
+        type: string
+      on_tertiary_color:
+        description: 'On tertiary color'
+        required: false
+        type: string
+      on_background_color:
+        description: 'On background color'
+        required: false
+        type: string
+      on_surface_color:
+        description: 'On surface color'
+        required: false
         type: string
       logo_url:
         description: 'Path to the logo file'
@@ -79,7 +107,14 @@ jobs:
         echo "Package: ${{ inputs.package_name }}"
         echo "Primary Color: ${{ inputs.primary_color }}"
         echo "Secondary Color: ${{ inputs.secondary_color }}"
+        echo "Tertiary Color: ${{ inputs.tertiary_color }}"
         echo "Background Color: ${{ inputs.background_color }}"
+        echo "Surface Color: ${{ inputs.surface_color }}"
+        echo "On Primary: ${{ inputs.on_primary_color }}"
+        echo "On Secondary: ${{ inputs.on_secondary_color }}"
+        echo "On Tertiary: ${{ inputs.on_tertiary_color }}"
+        echo "On Background: ${{ inputs.on_background_color }}"
+        echo "On Surface: ${{ inputs.on_surface_color }}"
         
         LOGO_PATH="${{ steps.fetch_logo.outputs.logo_path }}"
         if [ -n "$LOGO_PATH" ]; then
@@ -96,9 +131,16 @@ jobs:
           "appName": "${{ inputs.app_name }}",
           "packageName": "${{ inputs.package_name }}",
           "branding": {
-            "primaryColor": "${{ inputs.primary_color }}",
-            "secondaryColor": "${{ inputs.secondary_color }}",
-            "backgroundColor": "${{ inputs.background_color }}",
+            "primary": "${{ inputs.primary_color }}",
+            "secondary": "${{ inputs.secondary_color }}",
+            "tertiary": "${{ inputs.tertiary_color }}",
+            "background": "${{ inputs.background_color }}",
+            "surface": "${{ inputs.surface_color }}",
+            "on_primary": "${{ inputs.on_primary_color }}",
+            "on_secondary": "${{ inputs.on_secondary_color }}",
+            "on_tertiary": "${{ inputs.on_tertiary_color }}",
+            "on_background": "${{ inputs.on_background_color }}",
+            "on_surface": "${{ inputs.on_surface_color }}",
             "logoPath": "${{ steps.fetch_logo.outputs.logo_path }}"
           }
         }
