@@ -58,9 +58,15 @@ jobs:
       if: ${{ inputs.flavor_id != '' }}
       run: |
         chmod +x ./scripts/fetch_logo.sh
-        LOGO_PATH=$(./scripts/fetch_logo.sh "${{ inputs.flavor_id }}" "${{ secrets.FLAVORFLOW_API_KEY }}" logo --quiet)
-        echo "logo_path=$LOGO_PATH" >> $GITHUB_OUTPUT
-        echo "Downloaded logo to: $LOGO_PATH"
+        # Try to download logo, but don't fail if it doesn't exist
+        LOGO_PATH=$(./scripts/fetch_logo.sh "${{ inputs.flavor_id }}" "${{ secrets.FLAVORFLOW_API_KEY }}" logo --quiet 2>/dev/null || echo "")
+        if [ -n "$LOGO_PATH" ] && [ -f "$LOGO_PATH" ]; then
+          echo "logo_path=$LOGO_PATH" >> $GITHUB_OUTPUT
+          echo "Downloaded logo to: $LOGO_PATH"
+        else
+          echo "logo_path=" >> $GITHUB_OUTPUT
+          echo "No logo available for this flavor"
+        fi
       env:
         FLAVORFLOW_API_KEY: ${{ secrets.FLAVORFLOW_API_KEY }}
 
@@ -74,7 +80,13 @@ jobs:
         echo "Primary Color: ${{ inputs.primary_color }}"
         echo "Secondary Color: ${{ inputs.secondary_color }}"
         echo "Background Color: ${{ inputs.background_color }}"
-        echo "Downloaded Logo Path: ${{ steps.fetch_logo.outputs.logo_path }}"
+        
+        LOGO_PATH="${{ steps.fetch_logo.outputs.logo_path }}"
+        if [ -n "$LOGO_PATH" ]; then
+          echo "Downloaded Logo Path: $LOGO_PATH"
+        else
+          echo "No logo available for this flavor"
+        fi
         
         # Create flavor configuration file
         cat > flavor_config.json << EOF

@@ -1641,9 +1641,15 @@ def cleanup_empty_directories(directory):
 
 def generate_app_icons(config):
     """Generate launcher icons from logo and update AndroidManifest"""
-    logo_path = Path(config["branding"]["logoPath"])
+    # Check if logo path is provided and not empty
+    logo_path_str = config["branding"].get("logoPath", "").strip()
+    if not logo_path_str:
+        print("⚠ No logo provided, skipping launcher icon generation")
+        return
+    
+    logo_path = Path(logo_path_str)
     if not logo_path.exists():
-        print(f"⚠ Logo file not found: {logo_path}")
+        print(f"⚠ Logo file not found: {logo_path}, skipping launcher icon generation")
         return
     
     # Generate launcher icons
