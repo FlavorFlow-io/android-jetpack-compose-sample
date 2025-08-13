@@ -167,19 +167,25 @@ def update_xml_colors(config):
     """Update colors in colors.xml"""
     colors_path = get_app_source_path('src/main/res/values/colors.xml')
     
+    # Get colors
+    branding = config["branding"]
+    primary_color = branding.get("primary", "#6650a4")
+    secondary_color = branding.get("secondary", "#625b71")
+    background_color = branding.get("background", "#FFFBFE")
+    
     # Create colors.xml content
     colors_content = f'''<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary_color">{config["branding"]["primaryColor"]}</color>
-    <color name="secondary_color">{config["branding"]["secondaryColor"]}</color>
-    <color name="background_color">{config["branding"]["backgroundColor"]}</color>
+    <color name="primary_color">{primary_color}</color>
+    <color name="secondary_color">{secondary_color}</color>
+    <color name="background_color">{background_color}</color>
     
     <!-- Material Design Colors -->
-    <color name="purple_200">{config["branding"]["primaryColor"]}</color>
-    <color name="purple_500">{config["branding"]["primaryColor"]}</color>
-    <color name="purple_700">{config["branding"]["secondaryColor"]}</color>
-    <color name="teal_200">{config["branding"]["secondaryColor"]}</color>
-    <color name="teal_700">{config["branding"]["secondaryColor"]}</color>
+    <color name="purple_200">{primary_color}</color>
+    <color name="purple_500">{primary_color}</color>
+    <color name="purple_700">{secondary_color}</color>
+    <color name="teal_200">{secondary_color}</color>
+    <color name="teal_700">{secondary_color}</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 </resources>'''
@@ -187,7 +193,7 @@ def update_xml_colors(config):
     os.makedirs(colors_path.parent, exist_ok=True)
     with open(colors_path, 'w') as f:
         f.write(colors_content)
-    print(f"✓ Updated XML colors: primary={config['branding']['primaryColor']}, secondary={config['branding']['secondaryColor']}")
+    print(f"✓ Updated XML colors: primary={primary_color}, secondary={secondary_color}")
 
 def update_compose_theme(config):
     """Update Compose theme files"""
@@ -325,47 +331,46 @@ def update_existing_compose_theme(theme_file, config):
             existing_content = f.read()
         
         # Generate new color variables for available MD3 colors
-        # Handle both old format (primaryColor) and new API format (primary)
         branding = config["branding"]
         
         primary_color = hex_to_compose_color(
-            branding.get("primaryColor") or branding.get("primary", "#6650a4")
+            branding.get("primary", "#6650a4")
         )
         secondary_color = hex_to_compose_color(
-            branding.get("secondaryColor") or branding.get("secondary", "#625b71")
+            branding.get("secondary", "#625b71")
         )
         background_color = hex_to_compose_color(
-            branding.get("backgroundColor") or branding.get("background", "#FFFBFE")
+            branding.get("background", "#FFFBFE")
         )
         
-        # Optional colors - handle both formats
+        # Optional colors
         surface_color = hex_to_compose_color(
-            branding.get("surfaceColor") or branding.get("surface")
-        ) if (branding.get("surfaceColor") or branding.get("surface")) else None
+            branding.get("surface")
+        ) if branding.get("surface") else None
         
         tertiary_color = hex_to_compose_color(
-            branding.get("tertiaryColor") or branding.get("tertiary")
-        ) if (branding.get("tertiaryColor") or branding.get("tertiary")) else None
+            branding.get("tertiary")
+        ) if branding.get("tertiary") else None
         
         on_primary_color = hex_to_compose_color(
-            branding.get("onPrimaryColor") or branding.get("on_primary")
-        ) if (branding.get("onPrimaryColor") or branding.get("on_primary")) else None
+            branding.get("on_primary")
+        ) if branding.get("on_primary") else None
         
         on_secondary_color = hex_to_compose_color(
-            branding.get("onSecondaryColor") or branding.get("on_secondary")
-        ) if (branding.get("onSecondaryColor") or branding.get("on_secondary")) else None
+            branding.get("on_secondary")
+        ) if branding.get("on_secondary") else None
         
         on_tertiary_color = hex_to_compose_color(
-            branding.get("onTertiaryColor") or branding.get("on_tertiary")
-        ) if (branding.get("onTertiaryColor") or branding.get("on_tertiary")) else None
+            branding.get("on_tertiary")
+        ) if branding.get("on_tertiary") else None
         
         on_background_color = hex_to_compose_color(
-            branding.get("onBackgroundColor") or branding.get("on_background")
-        ) if (branding.get("onBackgroundColor") or branding.get("on_background")) else None
+            branding.get("on_background")
+        ) if branding.get("on_background") else None
         
         on_surface_color = hex_to_compose_color(
-            branding.get("onSurfaceColor") or branding.get("on_surface")
-        ) if (branding.get("onSurfaceColor") or branding.get("on_surface")) else None
+            branding.get("on_surface")
+        ) if branding.get("on_surface") else None
         
         # Simple approach: Always add branded colors with "Brand" prefix
         # This ensures compatibility with any existing project structure
@@ -603,9 +608,11 @@ def update_theme_kt_colors(content, config):
 def update_compose_colors(content, config):
     """Update color definitions in Compose theme content - focuses on Brand colors for universal compatibility"""
     # Get required color values from configuration
-    primary_color = config["branding"]["primaryColor"]
-    secondary_color = config["branding"]["secondaryColor"]
-    background_color = config["branding"]["backgroundColor"]
+    branding = config["branding"]
+    
+    primary_color = branding.get("primary", "#6650a4")
+    secondary_color = branding.get("secondary", "#625b71")
+    background_color = branding.get("background", "#FFFBFE")
     
     # Convert hex to Compose Color format
     primary_compose = hex_to_compose_color(primary_color)
@@ -632,54 +639,56 @@ def update_compose_colors(content, config):
     # Add patterns for optional colors if they exist in config
     branding = config["branding"]
     
-    if "onPrimaryColor" in branding:
-        on_primary_compose = hex_to_compose_color(branding["onPrimaryColor"])
+    on_primary_color = branding.get("on_primary")
+    if on_primary_color:
+        on_primary_compose = hex_to_compose_color(on_primary_color)
         patterns.extend([
             (r'^val\s+BrandOnPrimary\s*=\s*Color\([^)]+\)', f'val BrandOnPrimary = Color({on_primary_compose})'),
             (r'^val\s+BrandLightOnPrimary\s*=\s*Color\([^)]+\)', f'val BrandLightOnPrimary = Color({on_primary_compose})'),
             (r'^val\s+BrandDarkOnPrimary\s*=\s*Color\([^)]+\)', f'val BrandDarkOnPrimary = Color({on_primary_compose})'),
         ])
     
-    if "onSecondaryColor" in branding:
-        on_secondary_compose = hex_to_compose_color(branding["onSecondaryColor"])
+    on_secondary_color = branding.get("on_secondary")
+    if on_secondary_color:
+        on_secondary_compose = hex_to_compose_color(on_secondary_color)
         patterns.extend([
             (r'^val\s+BrandOnSecondary\s*=\s*Color\([^)]+\)', f'val BrandOnSecondary = Color({on_secondary_compose})'),
             (r'^val\s+BrandLightOnSecondary\s*=\s*Color\([^)]+\)', f'val BrandLightOnSecondary = Color({on_secondary_compose})'),
             (r'^val\s+BrandDarkOnSecondary\s*=\s*Color\([^)]+\)', f'val BrandDarkOnSecondary = Color({on_secondary_compose})'),
         ])
     
-    if "tertiaryColor" in branding:
-        tertiary_compose = hex_to_compose_color(branding["tertiaryColor"])
+    if branding.get("tertiary"):
+        tertiary_compose = hex_to_compose_color(branding.get("tertiary"))
         patterns.extend([
             (r'^val\s+BrandTertiary\s*=\s*Color\([^)]+\)', f'val BrandTertiary = Color({tertiary_compose})'),
             (r'^val\s+BrandLightTertiary\s*=\s*Color\([^)]+\)', f'val BrandLightTertiary = Color({tertiary_compose})'),
             (r'^val\s+BrandDarkTertiary\s*=\s*Color\([^)]+\)', f'val BrandDarkTertiary = Color({tertiary_compose})'),
         ])
     
-    if "onTertiaryColor" in branding:
-        on_tertiary_compose = hex_to_compose_color(branding["onTertiaryColor"])
+    if branding.get("on_tertiary"):
+        on_tertiary_compose = hex_to_compose_color(branding.get("on_tertiary"))
         patterns.extend([
             (r'^val\s+BrandOnTertiary\s*=\s*Color\([^)]+\)', f'val BrandOnTertiary = Color({on_tertiary_compose})'),
             (r'^val\s+BrandLightOnTertiary\s*=\s*Color\([^)]+\)', f'val BrandLightOnTertiary = Color({on_tertiary_compose})'),
             (r'^val\s+BrandDarkOnTertiary\s*=\s*Color\([^)]+\)', f'val BrandDarkOnTertiary = Color({on_tertiary_compose})'),
         ])
     
-    if "onBackgroundColor" in branding:
-        on_background_compose = hex_to_compose_color(branding["onBackgroundColor"])
+    if branding.get("on_background"):
+        on_background_compose = hex_to_compose_color(branding.get("on_background"))
         patterns.extend([
             (r'^val\s+BrandOnBackground\s*=\s*Color\([^)]+\)', f'val BrandOnBackground = Color({on_background_compose})'),
             (r'^val\s+BrandLightOnBackground\s*=\s*Color\([^)]+\)', f'val BrandLightOnBackground = Color({on_background_compose})'),
         ])
     
-    if "surfaceColor" in branding:
-        surface_compose = hex_to_compose_color(branding["surfaceColor"])
+    if branding.get("surface"):
+        surface_compose = hex_to_compose_color(branding.get("surface"))
         patterns.extend([
             (r'^val\s+BrandSurface\s*=\s*Color\([^)]+\)', f'val BrandSurface = Color({surface_compose})'),
             (r'^val\s+BrandLightSurface\s*=\s*Color\([^)]+\)', f'val BrandLightSurface = Color({surface_compose})'),
         ])
     
-    if "onSurfaceColor" in branding:
-        on_surface_compose = hex_to_compose_color(branding["onSurfaceColor"])
+    if branding.get("on_surface"):
+        on_surface_compose = hex_to_compose_color(branding.get("on_surface"))
         patterns.extend([
             (r'^val\s+BrandOnSurface\s*=\s*Color\([^)]+\)', f'val BrandOnSurface = Color({on_surface_compose})'),
             (r'^val\s+BrandLightOnSurface\s*=\s*Color\([^)]+\)', f'val BrandLightOnSurface = Color({on_surface_compose})'),
@@ -799,19 +808,39 @@ def create_compose_color_file(theme_dir, config, package_name=None):
         package_name = f'{package_name}.theme'
     
     # Extract required color values from config
-    primary_color = hex_to_compose_color(config["branding"]["primaryColor"])
-    secondary_color = hex_to_compose_color(config["branding"]["secondaryColor"])
-    background_color = hex_to_compose_color(config["branding"]["backgroundColor"])
-    
-    # Extract optional color values only if they exist
     branding = config["branding"]
-    on_primary_color = hex_to_compose_color(branding["onPrimaryColor"]) if "onPrimaryColor" in branding else None
-    on_secondary_color = hex_to_compose_color(branding["onSecondaryColor"]) if "onSecondaryColor" in branding else None
-    tertiary_color = hex_to_compose_color(branding["tertiaryColor"]) if "tertiaryColor" in branding else None
-    on_tertiary_color = hex_to_compose_color(branding["onTertiaryColor"]) if "onTertiaryColor" in branding else None
-    on_background_color = hex_to_compose_color(branding["onBackgroundColor"]) if "onBackgroundColor" in branding else None
-    surface_color = hex_to_compose_color(branding["surfaceColor"]) if "surfaceColor" in branding else None
-    on_surface_color = hex_to_compose_color(branding["onSurfaceColor"]) if "onSurfaceColor" in branding else None
+    primary_color = hex_to_compose_color(
+        branding.get("primary", "#6650a4")
+    )
+    secondary_color = hex_to_compose_color(
+        branding.get("secondary", "#625b71")
+    )
+    background_color = hex_to_compose_color(
+        branding.get("background", "#FFFBFE")
+    )
+    
+    # Extract optional color values
+    on_primary_color = hex_to_compose_color(
+        branding.get("on_primary")
+    ) if branding.get("on_primary") else None
+    
+    on_secondary_color = hex_to_compose_color(
+        branding.get("on_secondary")
+    ) if branding.get("on_secondary") else None
+    
+    tertiary_color = hex_to_compose_color(
+        branding.get("tertiary")
+    ) if branding.get("tertiary") else None
+    
+    on_tertiary_color = hex_to_compose_color(
+        branding.get("on_tertiary")
+    ) if branding.get("on_tertiary") else None
+    
+    on_background_color = hex_to_compose_color(
+        branding.get("on_background")
+    ) if branding.get("on_background") else None
+    surface_color = hex_to_compose_color(branding.get("surface")) if branding.get("surface") else None
+    on_surface_color = hex_to_compose_color(branding.get("on_surface")) if branding.get("on_surface") else None
     
     # Build color content dynamically based on available colors
     color_lines = [
@@ -957,19 +986,19 @@ def create_compose_theme_file(theme_dir, config, package_name=None):
         'background = LightBackground'
     ]
     
-    if "onPrimaryColor" in branding:
+    if branding.get("on_primary"):
         light_colors.insert(1, 'onPrimary = LightOnPrimary')
-    if "onSecondaryColor" in branding:
+    if branding.get("on_secondary"):
         light_colors.insert(-1, 'onSecondary = LightOnSecondary')
-    if "tertiaryColor" in branding:
+    if branding.get("tertiary"):
         light_colors.append('tertiary = LightTertiary')
-    if "onTertiaryColor" in branding:
+    if branding.get("on_tertiary"):
         light_colors.append('onTertiary = LightOnTertiary')
-    if "onBackgroundColor" in branding:
+    if branding.get("on_background"):
         light_colors.append('onBackground = LightOnBackground')
-    if "surfaceColor" in branding:
+    if branding.get("surface"):
         light_colors.append('surface = LightSurface')
-    if "onSurfaceColor" in branding:
+    if branding.get("on_surface"):
         light_colors.append('onSurface = LightOnSurface')
     
     # Build dark color scheme dynamically
@@ -980,15 +1009,15 @@ def create_compose_theme_file(theme_dir, config, package_name=None):
         'onBackground = DarkOnBackground'
     ]
     
-    if "onPrimaryColor" in branding:
+    if branding.get("on_primary"):
         dark_colors.insert(1, 'onPrimary = DarkOnPrimary')
-    if "onSecondaryColor" in branding:
+    if branding.get("on_secondary"):
         dark_colors.insert(-2, 'onSecondary = DarkOnSecondary')
-    if "tertiaryColor" in branding:
+    if branding.get("tertiary"):
         dark_colors.insert(-2, 'tertiary = DarkTertiary')
-    if "onTertiaryColor" in branding:
+    if branding.get("on_tertiary"):
         dark_colors.insert(-2, 'onTertiary = DarkOnTertiary')
-    if "surfaceColor" in branding:
+    if branding.get("surface"):
         dark_colors.extend(['surface = DarkSurface', 'onSurface = DarkOnSurface'])
     
     light_scheme = ',\n    '.join(light_colors)
@@ -1831,7 +1860,8 @@ def generate_adaptive_background(config):
     app_module = find_android_app_module()  # This will use cached result
     
     # Use primary color as background
-    primary_color = config["branding"]["primaryColor"]
+    branding = config["branding"]
+    primary_color = branding.get("primary", "#6650a4")
     
     # Convert hex to RGB
     hex_color = primary_color.lstrip('#')
@@ -1943,21 +1973,27 @@ def create_theme_xml(config):
     # Generate theme name from app name or slug
     theme_name = generate_theme_name(config)
     
+    # Get colors
+    branding = config["branding"]
+    primary_color = branding.get("primary", "#6650a4")
+    secondary_color = branding.get("secondary", "#625b71")
+    background_color = branding.get("background", "#FFFBFE")
+    
     theme_content = f'''<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="{theme_name}" parent="{parent_theme}">
         <!-- Primary brand color. -->
-        <item name="colorPrimary">{config["branding"]["primaryColor"]}</item>
-        <item name="colorPrimaryVariant">{config["branding"]["secondaryColor"]}</item>
+        <item name="colorPrimary">{primary_color}</item>
+        <item name="colorPrimaryVariant">{secondary_color}</item>
         <item name="colorOnPrimary">@color/white</item>
         <!-- Secondary brand color. -->
-        <item name="colorSecondary">{config["branding"]["secondaryColor"]}</item>
-        <item name="colorSecondaryVariant">{config["branding"]["primaryColor"]}</item>
+        <item name="colorSecondary">{secondary_color}</item>
+        <item name="colorSecondaryVariant">{primary_color}</item>
         <item name="colorOnSecondary">@color/black</item>
         <!-- Status bar color. -->
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
-        <item name="android:windowBackground">{config["branding"]["backgroundColor"]}</item>
+        <item name="android:windowBackground">{background_color}</item>
     </style>
 </resources>'''
     
@@ -2069,7 +2105,32 @@ def main():
     print(f"📱 Client: {config['clientName']}")
     print(f"📱 App Name: {config['appName']}")
     print(f"📦 Package: {config['packageName']}")
-    print(f"🎨 Colors: {config['branding']['primaryColor']}, {config['branding']['secondaryColor']}")
+    
+    # Display color information
+    branding = config['branding']
+    primary_color = branding.get('primary', 'N/A')
+    secondary_color = branding.get('secondary', 'N/A')
+    print(f"🎨 Primary Colors: {primary_color}, {secondary_color}")
+    
+    # Display all available colors
+    print("\n🎨 Available Material Design 3 Colors:")
+    color_fields = [
+        ('primary', 'Primary brand color'),
+        ('on_primary', 'Text/content color on primary'),
+        ('secondary', 'Secondary brand color'),
+        ('on_secondary', 'Text/content color on secondary'),
+        ('tertiary', 'Tertiary accent color'),
+        ('on_tertiary', 'Text/content color on tertiary'),
+        ('background', 'Background color'),
+        ('on_background', 'Text/content color on background'),
+        ('surface', 'Surface color'),
+        ('on_surface', 'Text/content color on surface')
+    ]
+    
+    for field, description in color_fields:
+        value = branding.get(field, 'Not provided')
+        print(f"  • {field}: {value} ({description})")
+    
     print()
     
     # Apply branding changes in the correct order
