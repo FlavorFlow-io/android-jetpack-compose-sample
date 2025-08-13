@@ -87,7 +87,7 @@ jobs:
             "primaryColor": "${{ inputs.primary_color }}",
             "secondaryColor": "${{ inputs.secondary_color }}",
             "backgroundColor": "${{ inputs.background_color }}",
-            "logoUrl": "${{ steps.fetch_logo.outputs.logo_path }}"
+            "logoPath": "${{ steps.fetch_logo.outputs.logo_path }}"
           }
         }
         EOF
