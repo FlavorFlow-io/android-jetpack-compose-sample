@@ -38,13 +38,13 @@ jobs:
 
     uses: ./.github/workflows/ci.yml
     with:
-      flavor_slug: ${{ matrix.flavor.id }}
+      flavor_id: ${{ matrix.flavor.id }}
       client_name: ${{ matrix.flavor.name }}
       app_name: ${{ matrix.flavor.app_name }}
       package_name: ${{ matrix.flavor.package_name }}
       primary_color: ${{ matrix.flavor.theme.light.primary }}
       secondary_color: ${{ matrix.flavor.theme.light.secondary }}
       background_color: ${{ matrix.flavor.theme.light.background }}
-      logo_path: ${{ matrix.flavor.logo_url }}
+      logo_url: ${{ matrix.flavor.logo_url }}
     secrets:
       FLAVORFLOW_API_KEY: ${{ secrets.FLAVORFLOW_API_KEY }}

@@ -1,13 +1,9 @@
 name: Android CI
 
 on:
-  push:
-    branches: [ "main"]
-  pull_request:
-    branches: [ "main" ]
   workflow_call:
     inputs:
-      flavor_slug:
+      flavor_id:
         description: 'The flavor slug identifier'
         required: true
         type: string
@@ -35,7 +31,7 @@ on:
         description: 'Background color'
         required: true
         type: string
-      logo_path:
+      logo_url:
         description: 'Path to the logo file'
         required: true
         type: string
@@ -57,22 +53,33 @@ jobs:
         distribution: 'jetbrains'
         java-version: '21'
 
-    - name: Apply Flavor Configuration
-      if: ${{ inputs.flavor_slug != '' }}
+    - name: Fetch Logo
+      id: fetch_logo
+      if: ${{ inputs.flavor_id != '' }}
       run: |
-        echo "Applying configuration for flavor: ${{ inputs.flavor_slug }}"
+        chmod +x ./scripts/fetch_logo.sh
+        LOGO_PATH=$(./scripts/fetch_logo.sh "${{ inputs.flavor_id }}" "${{ secrets.FLAVORFLOW_API_KEY }}" logo --quiet)
+        echo "logo_path=$LOGO_PATH" >> $GITHUB_OUTPUT
+        echo "Downloaded logo to: $LOGO_PATH"
+      env:
+        FLAVORFLOW_API_KEY: ${{ secrets.FLAVORFLOW_API_KEY }}
+
+    - name: Apply Flavor Configuration
+      if: ${{ inputs.flavor_id != '' }}
+      run: |
+        echo "Applying configuration for flavor: ${{ inputs.flavor_id }}"
         echo "Client: ${{ inputs.client_name }}"
         echo "App Name: ${{ inputs.app_name }}"
         echo "Package: ${{ inputs.package_name }}"
         echo "Primary Color: ${{ inputs.primary_color }}"
         echo "Secondary Color: ${{ inputs.secondary_color }}"
         echo "Background Color: ${{ inputs.background_color }}"
-        echo "Logo Path: ${{ inputs.logo_path }}"
+        echo "Downloaded Logo Path: ${{ steps.fetch_logo.outputs.logo_path }}"
         
         # Create flavor configuration file
         cat > flavor_config.json << EOF
         {
-          "slug": "${{ inputs.flavor_slug }}",
+          "slug": "${{ inputs.flavor_id }}",
           "clientName": "${{ inputs.client_name }}",
           "appName": "${{ inputs.app_name }}",
           "packageName": "${{ inputs.package_name }}",
@@ -80,21 +87,21 @@ jobs:
             "primaryColor": "${{ inputs.primary_color }}",
             "secondaryColor": "${{ inputs.secondary_color }}",
             "backgroundColor": "${{ inputs.background_color }}",
-            "logoPath": "${{ inputs.logo_path }}"
+            "logoUrl": "${{ steps.fetch_logo.outputs.logo_path }}"
           }
         }
         EOF
 
     - name: Setup Python
-      if: ${{ inputs.flavor_slug != '' }}
+      if: ${{ inputs.flavor_id != '' }}
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
 
     - name: Apply Branding
-      if: ${{ inputs.flavor_slug != '' }}
+      if: ${{ inputs.flavor_id != '' }}
       run: |
-        pip install -r scripts/requirements.txt
+        python -m pip install -r scripts/requirements.txt
         # Make the Python script executable
         chmod +x scripts/apply-branding.py
         
@@ -121,7 +128,7 @@ jobs:
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ inputs.flavor_slug != '' && format('app-{0}', inputs.flavor_slug) || 'app' }}
+        name: ${{ inputs.flavor_id != '' && format('app-{0}', inputs.flavor_id) || 'app' }}
         path: '**/outputs/**/*.apk'
         retention-days: 30
 
@@ -129,6 +136,6 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: ${{ inputs.flavor_slug != '' && format('build-reports-{0}', inputs.flavor_slug) || 'build-reports' }}
+        name: ${{ inputs.flavor_id != '' && format('build-reports-{0}', inputs.flavor_id) || 'build-reports' }}
         path: '**/build/reports/'
         retention-days: 7
