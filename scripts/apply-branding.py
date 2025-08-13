@@ -2057,6 +2057,11 @@ def main():
     
     print("🎨 Applying branding configuration...")
     print(f"📄 Using config file: {file_path}")
+    # print file content with json pretty for debugging
+    with open(file_path, 'r') as f:
+        content = f.read()
+        print("📄 Config file content:")
+        print(json.dumps(json.loads(content), indent=2))
     
     # Load configuration
     config = load_config(file_path)
