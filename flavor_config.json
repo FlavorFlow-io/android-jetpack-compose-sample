@@ -1,19 +1,19 @@
 {
-  "slug": "5dc7ad36-ebd7-462d-9339-c5afe19bd0cb",
+  "id": "5dc7ad36-ebd7-462d-9339-c5afe19bd0cb",
   "clientName": "Client A",
-  "appName": "",
+  "appName": "Client A",
   "packageName": "com.myorg.restaurant.clienta",
   "branding": {
-    "primary": "#6b4cff",
-    "secondary": "#22c55e",
-    "tertiary": "#0000ff",
-    "background": "#f7f9fb",
-    "surface": "#fffbfe",
-    "on_primary": "#ffffff",
-    "on_secondary": "#ffffff",
-    "on_tertiary": "#ffffff",
-    "on_background": "#1c1b1f",
-    "on_surface": "#1c1b1f",
+    "primaryColor": "#6b4cff",
+    "onPrimaryColor": "#22c55e",
+    "secondaryColor": "#0000ff",
+    "onSecondaryColor": "#f7f9fb",
+    "tertiaryColor": "#fffbfe",
+    "onTertiaryColor": "#ffffff",
+    "backgroundColor": "#ffffff",
+    "onBackgroundColor": "#ffffff",
+    "surfaceColor": "#1c1b1f",
+    "onSurfaceColor": "#1c1b1f",
     "logoPath": "logo.png"
   }
 }
