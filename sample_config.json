@@ -1,0 +1,18 @@
+{
+  "clientName": "Test Client",
+  "appName": "Sample App", 
+  "packageName": "com.example.sampleapp",
+  "branding": {
+    "primary": "#6650a4",
+    "on_primary": "#ffffff",
+    "secondary": "#625b71", 
+    "on_secondary": "#ffffff",
+    "tertiary": "#7d5260",
+    "on_tertiary": "#ffffff",
+    "background": "#fffbfe",
+    "on_background": "#1c1b1f",
+    "surface": "#fffbfe",
+    "on_surface": "#1c1b1f",
+    "logoPath": "logo.png"
+  }
+}
