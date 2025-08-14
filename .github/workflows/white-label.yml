@@ -51,6 +51,17 @@ jobs:
       on_tertiary_color: ${{ matrix.flavor.theme.light.on_tertiary }}
       on_background_color: ${{ matrix.flavor.theme.light.on_background }}
       on_surface_color: ${{ matrix.flavor.theme.light.on_surface }}
+      # Dark theme colors
+      dark_primary_color: ${{ matrix.flavor.theme.dark.primary }}
+      dark_secondary_color: ${{ matrix.flavor.theme.dark.secondary }}
+      dark_tertiary_color: ${{ matrix.flavor.theme.dark.tertiary }}
+      dark_background_color: ${{ matrix.flavor.theme.dark.background }}
+      dark_surface_color: ${{ matrix.flavor.theme.dark.surface }}
+      dark_on_primary_color: ${{ matrix.flavor.theme.dark.on_primary }}
+      dark_on_secondary_color: ${{ matrix.flavor.theme.dark.on_secondary }}
+      dark_on_tertiary_color: ${{ matrix.flavor.theme.dark.on_tertiary }}
+      dark_on_background_color: ${{ matrix.flavor.theme.dark.on_background }}
+      dark_on_surface_color: ${{ matrix.flavor.theme.dark.on_surface }}
       logo_url: ${{ matrix.flavor.logo_url }}
     secrets:
       FLAVORFLOW_API_KEY: ${{ secrets.FLAVORFLOW_API_KEY }}

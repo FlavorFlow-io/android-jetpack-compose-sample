@@ -59,6 +59,47 @@ on:
         description: 'On surface color'
         required: false
         type: string
+      # Dark theme colors
+      dark_primary_color:
+        description: 'Dark theme primary color'
+        required: false
+        type: string
+      dark_secondary_color:
+        description: 'Dark theme secondary color'
+        required: false
+        type: string
+      dark_tertiary_color:
+        description: 'Dark theme tertiary color'
+        required: false
+        type: string
+      dark_background_color:
+        description: 'Dark theme background color'
+        required: false
+        type: string
+      dark_surface_color:
+        description: 'Dark theme surface color'
+        required: false
+        type: string
+      dark_on_primary_color:
+        description: 'Dark theme on primary color'
+        required: false
+        type: string
+      dark_on_secondary_color:
+        description: 'Dark theme on secondary color'
+        required: false
+        type: string
+      dark_on_tertiary_color:
+        description: 'Dark theme on tertiary color'
+        required: false
+        type: string
+      dark_on_background_color:
+        description: 'Dark theme on background color'
+        required: false
+        type: string
+      dark_on_surface_color:
+        description: 'Dark theme on surface color'
+        required: false
+        type: string
       logo_url:
         description: 'Path to the logo file'
         required: true
@@ -114,7 +155,16 @@ jobs:
         echo "On Secondary: ${{ inputs.on_secondary_color }}"
         echo "On Tertiary: ${{ inputs.on_tertiary_color }}"
         echo "On Background: ${{ inputs.on_background_color }}"
-        echo "On Surface: ${{ inputs.on_surface_color }}"
+        echo "Dark Primary: ${{ inputs.dark_primary_color }}"
+        echo "Dark Secondary: ${{ inputs.dark_secondary_color }}"
+        echo "Dark Tertiary: ${{ inputs.dark_tertiary_color }}"
+        echo "Dark Background: ${{ inputs.dark_background_color }}"
+        echo "Dark Surface: ${{ inputs.dark_surface_color }}"
+        echo "Dark On Primary: ${{ inputs.dark_on_primary_color }}"
+        echo "Dark On Secondary: ${{ inputs.dark_on_secondary_color }}"
+        echo "Dark On Tertiary: ${{ inputs.dark_on_tertiary_color }}"
+        echo "Dark On Background: ${{ inputs.dark_on_background_color }}"
+        echo "Dark On Surface: ${{ inputs.dark_on_surface_color }}"
         
         LOGO_PATH="${{ steps.fetch_logo.outputs.logo_path }}"
         if [ -n "$LOGO_PATH" ]; then
@@ -123,27 +173,70 @@ jobs:
           echo "No logo available for this flavor"
         fi
         
-        # Create flavor configuration file
-        cat > flavor_config.json << EOF
-        {
-          "id": "${{ inputs.flavor_id }}",
-          "clientName": "${{ inputs.client_name }}",
-          "appName": "${{ inputs.app_name }}",
-          "packageName": "${{ inputs.package_name }}",
-          "branding": {
-            "primaryColor": "${{ inputs.primary_color }}",
-            "onPrimaryColor": "${{ inputs.secondary_color }}",
-            "secondaryColor": "${{ inputs.tertiary_color }}",
-            "onSecondaryColor": "${{ inputs.background_color }}",
-            "tertiaryColor": "${{ inputs.surface_color }}",
-            "onTertiaryColor": "${{ inputs.on_primary_color }}",
-            "backgroundColor": "${{ inputs.on_secondary_color }}",
-            "onBackgroundColor": "${{ inputs.on_tertiary_color }}",
-            "surfaceColor": "${{ inputs.on_background_color }}",
-            "onSurfaceColor": "${{ inputs.on_surface_color }}",
-            "logoPath": "${{ steps.fetch_logo.outputs.logo_path }}"
-          }
+        # Create flavor configuration file using Python for proper JSON handling
+        python3 << 'EOF'
+        import json
+        import os
+        
+        def add_if_not_empty(obj, key, value):
+            """Add key-value pair to object only if value is not empty"""
+            if value and value.strip():
+                obj[key] = value.strip()
+        
+        # Build the configuration object
+        config = {
+            "id": "${{ inputs.flavor_id }}",
+            "clientName": "${{ inputs.client_name }}",
+            "appName": "${{ inputs.app_name }}",
+            "packageName": "${{ inputs.package_name }}",
+            "branding": {}
         }
+        
+        # Build light theme
+        light_theme = {}
+        add_if_not_empty(light_theme, "primaryColor", "${{ inputs.primary_color }}")
+        add_if_not_empty(light_theme, "onPrimaryColor", "${{ inputs.on_primary_color }}")
+        add_if_not_empty(light_theme, "secondaryColor", "${{ inputs.secondary_color }}")
+        add_if_not_empty(light_theme, "onSecondaryColor", "${{ inputs.on_secondary_color }}")
+        add_if_not_empty(light_theme, "tertiaryColor", "${{ inputs.tertiary_color }}")
+        add_if_not_empty(light_theme, "onTertiaryColor", "${{ inputs.on_tertiary_color }}")
+        add_if_not_empty(light_theme, "backgroundColor", "${{ inputs.background_color }}")
+        add_if_not_empty(light_theme, "onBackgroundColor", "${{ inputs.on_background_color }}")
+        add_if_not_empty(light_theme, "surfaceColor", "${{ inputs.surface_color }}")
+        add_if_not_empty(light_theme, "onSurfaceColor", "${{ inputs.on_surface_color }}")
+        
+        # Add light theme only if it has any properties
+        if light_theme:
+            config["branding"]["lightTheme"] = light_theme
+        
+        # Build dark theme
+        dark_theme = {}
+        add_if_not_empty(dark_theme, "primaryColor", "${{ inputs.dark_primary_color }}")
+        add_if_not_empty(dark_theme, "onPrimaryColor", "${{ inputs.dark_on_primary_color }}")
+        add_if_not_empty(dark_theme, "secondaryColor", "${{ inputs.dark_secondary_color }}")
+        add_if_not_empty(dark_theme, "onSecondaryColor", "${{ inputs.dark_on_secondary_color }}")
+        add_if_not_empty(dark_theme, "tertiaryColor", "${{ inputs.dark_tertiary_color }}")
+        add_if_not_empty(dark_theme, "onTertiaryColor", "${{ inputs.dark_on_tertiary_color }}")
+        add_if_not_empty(dark_theme, "backgroundColor", "${{ inputs.dark_background_color }}")
+        add_if_not_empty(dark_theme, "onBackgroundColor", "${{ inputs.dark_on_background_color }}")
+        add_if_not_empty(dark_theme, "surfaceColor", "${{ inputs.dark_surface_color }}")
+        add_if_not_empty(dark_theme, "onSurfaceColor", "${{ inputs.dark_on_surface_color }}")
+        
+        # Add dark theme only if it has any properties
+        if dark_theme:
+            config["branding"]["darkTheme"] = dark_theme
+        
+        # Add logo path if available
+        logo_path = "${{ steps.fetch_logo.outputs.logo_path }}"
+        if logo_path and logo_path.strip():
+            config["branding"]["logoPath"] = logo_path.strip()
+        
+        # Write the JSON file
+        with open("flavor_config.json", "w") as f:
+            json.dump(config, f, indent=2)
+        
+        print("Generated flavor_config.json:")
+        print(json.dumps(config, indent=2))
         EOF
 
     - name: Setup Python
