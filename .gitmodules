@@ -1,0 +1,3 @@
+[submodule ".github/actions/fetch-flavors-action"]
+	path = .github/actions/fetch-flavors-action
+	url = git@github.com:lssoftwares/fetch-flavors-action.git
