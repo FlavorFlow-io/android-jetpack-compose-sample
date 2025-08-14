@@ -1,0 +1,14 @@
+# .github/workflows/build.yml
+name: Deploy White-Label App
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build app
+        run: |
+          echo "Building app for flavor ${{ env.FLAVOR_NAME }} (ID: ${{ env.FLAVOR_ID }})"
