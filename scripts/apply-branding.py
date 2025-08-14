@@ -197,8 +197,8 @@ def update_xml_colors(config):
 
 def update_compose_theme(config):
     """Update Compose theme files"""
-    # Look for existing Compose theme files
-    theme_files = find_compose_theme_files()
+    # Look for existing Compose theme files using the current package name
+    theme_files = find_compose_theme_files(config)
     
     if theme_files:
         for theme_file in theme_files:
@@ -207,12 +207,30 @@ def update_compose_theme(config):
         # Create new Compose theme files
         create_compose_theme_files(config)
 
-def find_compose_theme_files():
+def find_compose_theme_files(config=None):
     """Find existing Compose theme files"""
     theme_files = []
     app_module = find_android_app_module()  # This will use cached result
     
-    # Common paths for Compose theme files relative to app module
+    # If config is provided, search in the correct package structure
+    if config:
+        package_path = config["packageName"].replace('.', '/')
+        specific_search_paths = [
+            f'{JAVA_SOURCE_DIR}/{package_path}/ui/theme',
+            f'{KOTLIN_SOURCE_DIR}/{package_path}/ui/theme',
+            f'{JAVA_SOURCE_DIR}/{package_path}/theme',
+            f'{KOTLIN_SOURCE_DIR}/{package_path}/theme'
+        ]
+        
+        for search_path in specific_search_paths:
+            path = app_module / search_path
+            if path.exists() and path.is_dir():
+                # Look for theme-related files
+                for file in path.glob('*.kt'):
+                    if any(keyword in file.name.lower() for keyword in ['color', 'theme']):
+                        theme_files.append(file)
+    
+    # Fallback: Common paths for Compose theme files relative to app module
     search_paths = [
         f'{JAVA_SOURCE_DIR}/**/ui/theme',
         f'{KOTLIN_SOURCE_DIR}/**/ui/theme',
@@ -225,7 +243,7 @@ def find_compose_theme_files():
             if path.is_dir():
                 # Look for theme-related files
                 for file in path.glob('*.kt'):
-                    if any(keyword in file.name.lower() for keyword in ['color', 'theme']):
+                    if any(keyword in file.name.lower() for keyword in ['color', 'theme']) and file not in theme_files:
                         theme_files.append(file)
     
     return theme_files
@@ -492,8 +510,8 @@ def update_existing_compose_theme(theme_file, config):
         if theme_file.name.lower() == 'theme.kt':
             print(f"🔄 Updating Theme.kt to use proper color variables: {theme_file}")
             
-            # Update Theme.kt to use our standard color variables
-            content = update_theme_kt_colors(content, config)
+            # Use the robust update_compose_colors function for Theme.kt to handle corrupted syntax
+            content = update_compose_colors(content, config)
         else:
             # Update color definitions based on common patterns
             content = update_compose_colors(content, config)
@@ -606,95 +624,160 @@ def update_theme_kt_colors(content, config):
     return content
 
 def update_compose_colors(content, config):
-    """Update color definitions in Compose theme content - focuses on Brand colors for universal compatibility"""
-    # Get required color values from configuration
+    """Update color definitions in Compose theme content - replaces entire color scheme blocks"""
     branding = config["branding"]
     
-    primary_color = branding.get("primary", "#6650a4")
-    secondary_color = branding.get("secondary", "#625b71")
-    background_color = branding.get("background", "#FFFBFE")
+    # Helper function to get color with fallback to old field names
+    def get_color(new_field, old_field):
+        return branding.get(new_field) or branding.get(old_field)
     
-    # Convert hex to Compose Color format
-    primary_compose = hex_to_compose_color(primary_color)
-    secondary_compose = hex_to_compose_color(secondary_color)
-    background_compose = hex_to_compose_color(background_color)
+    # Build complete light color scheme
+    light_colors = []
     
-    # Build patterns for brand colors (these work with any project)
+    primary = get_color("primary", "primaryColor")
+    if primary:
+        light_colors.append(f'primary = Color({hex_to_compose_color(primary)})')
+    
+    on_primary = get_color("on_primary", "onPrimaryColor")
+    if on_primary:
+        light_colors.append(f'onPrimary = Color({hex_to_compose_color(on_primary)})')
+    
+    secondary = get_color("secondary", "secondaryColor")
+    if secondary:
+        light_colors.append(f'secondary = Color({hex_to_compose_color(secondary)})')
+    
+    on_secondary = get_color("on_secondary", "onSecondaryColor")
+    if on_secondary:
+        light_colors.append(f'onSecondary = Color({hex_to_compose_color(on_secondary)})')
+    
+    tertiary = get_color("tertiary", "tertiaryColor")
+    if tertiary:
+        light_colors.append(f'tertiary = Color({hex_to_compose_color(tertiary)})')
+    
+    on_tertiary = get_color("on_tertiary", "onTertiaryColor")
+    if on_tertiary:
+        light_colors.append(f'onTertiary = Color({hex_to_compose_color(on_tertiary)})')
+    
+    background = get_color("background", "backgroundColor")
+    if background:
+        light_colors.append(f'background = Color({hex_to_compose_color(background)})')
+    
+    on_background = get_color("on_background", "onBackgroundColor")
+    if on_background:
+        light_colors.append(f'onBackground = Color({hex_to_compose_color(on_background)})')
+    
+    surface = get_color("surface", "surfaceColor")
+    if surface:
+        light_colors.append(f'surface = Color({hex_to_compose_color(surface)})')
+    
+    on_surface = get_color("on_surface", "onSurfaceColor")
+    if on_surface:
+        light_colors.append(f'onSurface = Color({hex_to_compose_color(on_surface)})')
+    
+    # Build complete dark color scheme
+    dark_colors = []
+    
+    if primary:
+        dark_colors.append(f'primary = Color({hex_to_compose_color(primary)})')
+    
+    if on_primary:
+        dark_colors.append(f'onPrimary = Color({hex_to_compose_color(on_primary)})')
+    
+    if secondary:
+        dark_colors.append(f'secondary = Color({hex_to_compose_color(secondary)})')
+    
+    if on_secondary:
+        dark_colors.append(f'onSecondary = Color({hex_to_compose_color(on_secondary)})')
+    
+    if tertiary:
+        dark_colors.append(f'tertiary = Color({hex_to_compose_color(tertiary)})')
+    
+    if on_tertiary:
+        dark_colors.append(f'onTertiary = Color({hex_to_compose_color(on_tertiary)})')
+    
+    # Use darker defaults for dark theme background
+    dark_colors.append('background = Color(0xFF121212)')
+    dark_colors.append('onBackground = Color(0xFFFFFFFF)')
+    
+    if surface:
+        dark_colors.append('surface = Color(0xFF1C1B1F)')
+    else:
+        dark_colors.append('surface = Color(0xFF1C1B1F)')  # Default dark surface
+    
+    if on_surface:
+        dark_colors.append('onSurface = Color(0xFFE6E1E5)')
+    else:
+        dark_colors.append('onSurface = Color(0xFFE6E1E5)')  # Default dark onSurface
+    
+    # Simple and robust replacement using multiline regex patterns
+    if light_colors:
+        light_scheme_content = ',\n    '.join(light_colors)
+        new_light_scheme = f'private val LightColorScheme = lightColorScheme(\n    {light_scheme_content}\n)'
+        
+        # Replace everything from "private val LightColorScheme" to the next "private val" or "@Composable"
+        light_pattern = r'private\s+val\s+LightColorScheme\s*=\s*lightColorScheme\s*\([^)]*(?:\([^)]*\)[^)]*)*(?:,\s*[^)]*)*\*?/?\s*\)\s*(?:,\s*[^)]*\*?/?\s*)*'
+        
+        # Try the multiline replacement
+        new_content = re.sub(light_pattern, new_light_scheme, content, flags=re.DOTALL)
+        
+        # If the pattern didn't match (complex corruption), use a more aggressive approach
+        if new_content == content and 'LightColorScheme' in content:
+            # Find the start and manually find the end
+            start_pattern = r'private\s+val\s+LightColorScheme'
+            start_match = re.search(start_pattern, content)
+            if start_match:
+                start_idx = start_match.start()
+                # Find the next major declaration
+                remaining = content[start_idx:]
+                end_pattern = r'\n\n\s*(?:private\s+val\s+\w+|@Composable|fun\s+\w+)'
+                end_match = re.search(end_pattern, remaining)
+                if end_match:
+                    end_idx = start_idx + end_match.start()
+                    content = content[:start_idx] + new_light_scheme + content[end_idx:]
+                else:
+                    # Last resort: replace a reasonable chunk
+                    end_idx = start_idx + min(1000, len(remaining))
+                    content = content[:start_idx] + new_light_scheme + '\n\n' + content[end_idx:].lstrip()
+        else:
+            content = new_content
+    
+    # Similar approach for dark color scheme
+    if dark_colors:
+        dark_scheme_content = ',\n    '.join(dark_colors)
+        new_dark_scheme = f'private val DarkColorScheme = darkColorScheme(\n    {dark_scheme_content}\n)'
+        
+        # Replace everything from "private val DarkColorScheme" to the next "private val" or similar
+        dark_pattern = r'private\s+val\s+DarkColorScheme\s*=\s*darkColorScheme\s*\([^)]*(?:\([^)]*\)[^)]*)*(?:,\s*[^)]*)*\*?/?\s*\)\s*'
+        
+        # Try the multiline replacement
+        new_content = re.sub(dark_pattern, new_dark_scheme, content, flags=re.DOTALL)
+        
+        # If the pattern didn't match, use the aggressive approach
+        if new_content == content and 'DarkColorScheme' in content:
+            start_pattern = r'private\s+val\s+DarkColorScheme'
+            start_match = re.search(start_pattern, content)
+            if start_match:
+                start_idx = start_match.start()
+                remaining = content[start_idx:]
+                end_pattern = r'\n\n\s*(?:private\s+val\s+\w+|@Composable|fun\s+\w+)'
+                end_match = re.search(end_pattern, remaining)
+                if end_match:
+                    end_idx = start_idx + end_match.start()
+                    content = content[:start_idx] + new_dark_scheme + content[end_idx:]
+                else:
+                    end_idx = start_idx + min(1000, len(remaining))
+                    content = content[:start_idx] + new_dark_scheme + '\n\n' + content[end_idx:].lstrip()
+        else:
+            content = new_content
+    
+    # Update individual color definitions
     patterns = [
-        # Brand color definitions (universal approach)
-        (r'^val\s+BrandPrimary\s*=\s*Color\([^)]+\)', f'val BrandPrimary = Color({primary_compose})'),
-        (r'^val\s+BrandSecondary\s*=\s*Color\([^)]+\)', f'val BrandSecondary = Color({secondary_compose})'),
-        (r'^val\s+BrandBackground\s*=\s*Color\([^)]+\)', f'val BrandBackground = Color({background_compose})'),
-        
-        # Light theme brand variants
-        (r'^val\s+BrandLightPrimary\s*=\s*Color\([^)]+\)', f'val BrandLightPrimary = Color({primary_compose})'),
-        (r'^val\s+BrandLightSecondary\s*=\s*Color\([^)]+\)', f'val BrandLightSecondary = Color({secondary_compose})'),
-        (r'^val\s+BrandLightBackground\s*=\s*Color\([^)]+\)', f'val BrandLightBackground = Color({background_compose})'),
-        
-        # Dark theme brand variants
-        (r'^val\s+BrandDarkPrimary\s*=\s*Color\([^)]+\)', f'val BrandDarkPrimary = Color({primary_compose})'),
-        (r'^val\s+BrandDarkSecondary\s*=\s*Color\([^)]+\)', f'val BrandDarkSecondary = Color({secondary_compose})'),
+        (r'^val\s+BrandPrimary\s*=\s*Color\([^)]+\)', f'val BrandPrimary = Color({hex_to_compose_color(branding.get("primary", "#6650a4"))})'),
+        (r'^val\s+BrandSecondary\s*=\s*Color\([^)]+\)', f'val BrandSecondary = Color({hex_to_compose_color(branding.get("secondary", "#625b71"))})'),
+        (r'^val\s+BrandBackground\s*=\s*Color\([^)]+\)', f'val BrandBackground = Color({hex_to_compose_color(branding.get("background", "#FFFBFE"))})'),
     ]
     
-    # Add patterns for optional colors if they exist in config
-    branding = config["branding"]
-    
-    on_primary_color = branding.get("on_primary")
-    if on_primary_color:
-        on_primary_compose = hex_to_compose_color(on_primary_color)
-        patterns.extend([
-            (r'^val\s+BrandOnPrimary\s*=\s*Color\([^)]+\)', f'val BrandOnPrimary = Color({on_primary_compose})'),
-            (r'^val\s+BrandLightOnPrimary\s*=\s*Color\([^)]+\)', f'val BrandLightOnPrimary = Color({on_primary_compose})'),
-            (r'^val\s+BrandDarkOnPrimary\s*=\s*Color\([^)]+\)', f'val BrandDarkOnPrimary = Color({on_primary_compose})'),
-        ])
-    
-    on_secondary_color = branding.get("on_secondary")
-    if on_secondary_color:
-        on_secondary_compose = hex_to_compose_color(on_secondary_color)
-        patterns.extend([
-            (r'^val\s+BrandOnSecondary\s*=\s*Color\([^)]+\)', f'val BrandOnSecondary = Color({on_secondary_compose})'),
-            (r'^val\s+BrandLightOnSecondary\s*=\s*Color\([^)]+\)', f'val BrandLightOnSecondary = Color({on_secondary_compose})'),
-            (r'^val\s+BrandDarkOnSecondary\s*=\s*Color\([^)]+\)', f'val BrandDarkOnSecondary = Color({on_secondary_compose})'),
-        ])
-    
-    if branding.get("tertiary"):
-        tertiary_compose = hex_to_compose_color(branding.get("tertiary"))
-        patterns.extend([
-            (r'^val\s+BrandTertiary\s*=\s*Color\([^)]+\)', f'val BrandTertiary = Color({tertiary_compose})'),
-            (r'^val\s+BrandLightTertiary\s*=\s*Color\([^)]+\)', f'val BrandLightTertiary = Color({tertiary_compose})'),
-            (r'^val\s+BrandDarkTertiary\s*=\s*Color\([^)]+\)', f'val BrandDarkTertiary = Color({tertiary_compose})'),
-        ])
-    
-    if branding.get("on_tertiary"):
-        on_tertiary_compose = hex_to_compose_color(branding.get("on_tertiary"))
-        patterns.extend([
-            (r'^val\s+BrandOnTertiary\s*=\s*Color\([^)]+\)', f'val BrandOnTertiary = Color({on_tertiary_compose})'),
-            (r'^val\s+BrandLightOnTertiary\s*=\s*Color\([^)]+\)', f'val BrandLightOnTertiary = Color({on_tertiary_compose})'),
-            (r'^val\s+BrandDarkOnTertiary\s*=\s*Color\([^)]+\)', f'val BrandDarkOnTertiary = Color({on_tertiary_compose})'),
-        ])
-    
-    if branding.get("on_background"):
-        on_background_compose = hex_to_compose_color(branding.get("on_background"))
-        patterns.extend([
-            (r'^val\s+BrandOnBackground\s*=\s*Color\([^)]+\)', f'val BrandOnBackground = Color({on_background_compose})'),
-            (r'^val\s+BrandLightOnBackground\s*=\s*Color\([^)]+\)', f'val BrandLightOnBackground = Color({on_background_compose})'),
-        ])
-    
-    if branding.get("surface"):
-        surface_compose = hex_to_compose_color(branding.get("surface"))
-        patterns.extend([
-            (r'^val\s+BrandSurface\s*=\s*Color\([^)]+\)', f'val BrandSurface = Color({surface_compose})'),
-            (r'^val\s+BrandLightSurface\s*=\s*Color\([^)]+\)', f'val BrandLightSurface = Color({surface_compose})'),
-        ])
-    
-    if branding.get("on_surface"):
-        on_surface_compose = hex_to_compose_color(branding.get("on_surface"))
-        patterns.extend([
-            (r'^val\s+BrandOnSurface\s*=\s*Color\([^)]+\)', f'val BrandOnSurface = Color({on_surface_compose})'),
-            (r'^val\s+BrandLightOnSurface\s*=\s*Color\([^)]+\)', f'val BrandLightOnSurface = Color({on_surface_compose})'),
-        ])
-    
-    # Apply all patterns
+    # Apply patterns for individual color definitions
     for pattern, replacement in patterns:
         content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
     
@@ -758,8 +841,15 @@ def create_compose_theme_files(config):
     # Create Color.kt file
     create_compose_color_file(theme_dir, config, package_with_subdir)
     
-    # Create Theme.kt file
-    create_compose_theme_file(theme_dir, config, package_with_subdir)
+    # Only create Theme.kt file if it doesn't already exist
+    # Existing Theme.kt files are preserved with their original function names
+    # and only their color schemes are updated via update_existing_compose_theme()
+    theme_kt_file = theme_dir / 'Theme.kt'
+    if not theme_kt_file.exists():
+        create_compose_theme_file(theme_dir, config, package_with_subdir)
+        print(f"✓ Created new Theme.kt file with {config['appName'].replace(' ', '')}Theme function")
+    else:
+        print(f"✓ Preserved existing Theme.kt file (function name and structure maintained)")
     
     # Create Type.kt file (Typography)
     create_compose_typography_file(theme_dir, config, package_with_subdir)
@@ -979,46 +1069,46 @@ def create_compose_theme_file(theme_dir, config, package_name=None):
     app_name = config["appName"].replace(' ', '')
     branding = config["branding"]
     
-    # Build light color scheme dynamically
+    # Build light color scheme using Brand variable names
     light_colors = [
-        'primary = LightPrimary',
-        'secondary = LightSecondary',
-        'background = LightBackground'
+        'primary = BrandLightPrimary',
+        'secondary = BrandLightSecondary',
+        'background = BrandLightBackground'
     ]
     
-    if branding.get("on_primary"):
-        light_colors.insert(1, 'onPrimary = LightOnPrimary')
-    if branding.get("on_secondary"):
-        light_colors.insert(-1, 'onSecondary = LightOnSecondary')
-    if branding.get("tertiary"):
-        light_colors.append('tertiary = LightTertiary')
-    if branding.get("on_tertiary"):
-        light_colors.append('onTertiary = LightOnTertiary')
-    if branding.get("on_background"):
-        light_colors.append('onBackground = LightOnBackground')
-    if branding.get("surface"):
-        light_colors.append('surface = LightSurface')
-    if branding.get("on_surface"):
-        light_colors.append('onSurface = LightOnSurface')
+    if branding.get("on_primary") or branding.get("onPrimaryColor"):
+        light_colors.insert(1, 'onPrimary = BrandLightOnPrimary')
+    if branding.get("on_secondary") or branding.get("onSecondaryColor"):
+        light_colors.insert(-1, 'onSecondary = BrandLightOnSecondary')
+    if branding.get("tertiary") or branding.get("tertiaryColor"):
+        light_colors.append('tertiary = BrandLightTertiary')
+    if branding.get("on_tertiary") or branding.get("onTertiaryColor"):
+        light_colors.append('onTertiary = BrandLightOnTertiary')
+    if branding.get("on_background") or branding.get("onBackgroundColor"):
+        light_colors.append('onBackground = BrandLightOnBackground')
+    if branding.get("surface") or branding.get("surfaceColor"):
+        light_colors.append('surface = BrandLightSurface')
+    if branding.get("on_surface") or branding.get("onSurfaceColor"):
+        light_colors.append('onSurface = BrandLightOnSurface')
     
-    # Build dark color scheme dynamically
+    # Build dark color scheme using Brand variable names
     dark_colors = [
-        'primary = DarkPrimary',
-        'secondary = DarkSecondary',
-        'background = DarkBackground',
-        'onBackground = DarkOnBackground'
+        'primary = BrandDarkPrimary',
+        'secondary = BrandDarkSecondary',
+        'background = BrandDarkBackground',
+        'onBackground = BrandDarkOnBackground'
     ]
     
-    if branding.get("on_primary"):
-        dark_colors.insert(1, 'onPrimary = DarkOnPrimary')
-    if branding.get("on_secondary"):
-        dark_colors.insert(-2, 'onSecondary = DarkOnSecondary')
-    if branding.get("tertiary"):
-        dark_colors.insert(-2, 'tertiary = DarkTertiary')
-    if branding.get("on_tertiary"):
-        dark_colors.insert(-2, 'onTertiary = DarkOnTertiary')
-    if branding.get("surface"):
-        dark_colors.extend(['surface = DarkSurface', 'onSurface = DarkOnSurface'])
+    if branding.get("on_primary") or branding.get("onPrimaryColor"):
+        dark_colors.insert(1, 'onPrimary = BrandDarkOnPrimary')
+    if branding.get("on_secondary") or branding.get("onSecondaryColor"):
+        dark_colors.insert(-2, 'onSecondary = BrandDarkOnSecondary')
+    if branding.get("tertiary") or branding.get("tertiaryColor"):
+        dark_colors.insert(-2, 'tertiary = BrandDarkTertiary')
+    if branding.get("on_tertiary") or branding.get("onTertiaryColor"):
+        dark_colors.insert(-2, 'onTertiary = BrandDarkOnTertiary')
+    if branding.get("surface") or branding.get("surfaceColor"):
+        dark_colors.extend(['surface = BrandDarkSurface', 'onSurface = BrandDarkOnSurface'])
     
     light_scheme = ',\n    '.join(light_colors)
     dark_scheme = ',\n    '.join(dark_colors)
