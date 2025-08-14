@@ -25,3 +25,4 @@ jobs:
           project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
           build-workflow: build.yml
           deploy-workflow: deploy.yml
+          github-token: ${{ secrets.GITHUB_TOKEN }}
