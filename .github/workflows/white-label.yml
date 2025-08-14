@@ -39,7 +39,7 @@ jobs:
     with:
       flavor_id: ${{ matrix.flavor.id }}
       client_name: ${{ matrix.flavor.name }}
-      app_name: ${{ matrix.flavor.app_name }}
+      app_name: ${{ matrix.flavor.app_name || matrix.flavor.name }}
       package_name: ${{ matrix.flavor.package_name }}
       primary_color: ${{ matrix.flavor.theme.light.primary }}
       secondary_color: ${{ matrix.flavor.theme.light.secondary }}

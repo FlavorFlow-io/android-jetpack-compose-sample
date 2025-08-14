@@ -126,21 +126,21 @@ jobs:
         # Create flavor configuration file
         cat > flavor_config.json << EOF
         {
-          "slug": "${{ inputs.flavor_id }}",
+          "id": "${{ inputs.flavor_id }}",
           "clientName": "${{ inputs.client_name }}",
           "appName": "${{ inputs.app_name }}",
           "packageName": "${{ inputs.package_name }}",
           "branding": {
-            "primary": "${{ inputs.primary_color }}",
-            "secondary": "${{ inputs.secondary_color }}",
-            "tertiary": "${{ inputs.tertiary_color }}",
-            "background": "${{ inputs.background_color }}",
-            "surface": "${{ inputs.surface_color }}",
-            "on_primary": "${{ inputs.on_primary_color }}",
-            "on_secondary": "${{ inputs.on_secondary_color }}",
-            "on_tertiary": "${{ inputs.on_tertiary_color }}",
-            "on_background": "${{ inputs.on_background_color }}",
-            "on_surface": "${{ inputs.on_surface_color }}",
+            "primaryColor": "${{ inputs.primary_color }}",
+            "onPrimaryColor": "${{ inputs.secondary_color }}",
+            "secondaryColor": "${{ inputs.tertiary_color }}",
+            "onSecondaryColor": "${{ inputs.background_color }}",
+            "tertiaryColor": "${{ inputs.surface_color }}",
+            "onTertiaryColor": "${{ inputs.on_primary_color }}",
+            "backgroundColor": "${{ inputs.on_secondary_color }}",
+            "onBackgroundColor": "${{ inputs.on_tertiary_color }}",
+            "surfaceColor": "${{ inputs.on_background_color }}",
+            "onSurfaceColor": "${{ inputs.on_surface_color }}",
             "logoPath": "${{ steps.fetch_logo.outputs.logo_path }}"
           }
         }

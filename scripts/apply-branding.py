@@ -2159,14 +2159,8 @@ def detect_existing_theme_parent():
 
 def generate_theme_name(config):
     """Generate a theme name from config"""
-    if 'slug' in config and config['slug']:
-        # Use slug if available
-        theme_name = config['slug'].replace('-', '').replace('_', '').title()
-        return f"Theme.{theme_name}"
-    else:
-        # Use app name as fallback
-        app_name = config["appName"].replace(' ', '').replace('-', '').replace('_', '')
-        return f"Theme.{app_name}"
+    app_name = config["appName"].replace(' ', '').replace('-', '').replace('_', '')
+    return f"Theme.{app_name}"
 
 def main():
     # Check for command line arguments

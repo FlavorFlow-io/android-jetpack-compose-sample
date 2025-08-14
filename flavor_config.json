@@ -1,19 +1,19 @@
 {
-  "slug": "acme-corp",
-  "clientName": "ACME Corporation",
-  "appName": "ACME Business App",
-  "packageName": "com.acmecorp.business",
+  "slug": "5dc7ad36-ebd7-462d-9339-c5afe19bd0cb",
+  "clientName": "Client A",
+  "appName": "",
+  "packageName": "com.myorg.restaurant.clienta",
   "branding": {
-    "primaryColor": "#FF0000",
-    "onPrimaryColor": "#FFFFFF",
-    "secondaryColor": "#00FF00",
-    "onSecondaryColor": "#FFFFFF",
-    "tertiaryColor": "#0000FF",
-    "onTertiaryColor": "#FFFFFF",
-    "backgroundColor": "#EEEEEE",
-    "onBackgroundColor": "#1C1B1F",
-    "surfaceColor": "#FFFBFE",
-    "onSurfaceColor": "#1C1B1F",
-    "logoPath": "samples/assets/logos/fake.png"
+    "primary": "#6b4cff",
+    "secondary": "#22c55e",
+    "tertiary": "#0000ff",
+    "background": "#f7f9fb",
+    "surface": "#fffbfe",
+    "on_primary": "#ffffff",
+    "on_secondary": "#ffffff",
+    "on_tertiary": "#ffffff",
+    "on_background": "#1c1b1f",
+    "on_surface": "#1c1b1f",
+    "logoPath": "logo.png"
   }
 }
