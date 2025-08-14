@@ -22,8 +22,6 @@ jobs:
         uses: ./.github/actions/fetch-flavors-action
         id: hello
         with:
-          who-to-greet: LUCIANOSANTOS
-
-      # Use the output from the `hello` step
-      - name: Get the output time
-        run: echo "The time was ${{ steps.hello.outputs.time }}"
+          project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
+          build-workflow: build.yml
+          deploy-workflow: deploy.yml

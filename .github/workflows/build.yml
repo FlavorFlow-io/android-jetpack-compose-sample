@@ -1,0 +1,47 @@
+# .github/workflows/build.yml
+name: Build White-Label App
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: 'Complete flavor JSON object'
+        required: true
+        type: string
+      flavorName:
+        description: 'Name of the flavor'
+        required: true
+        type: string
+      flavorId:
+        description: 'ID of the flavor'
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      flavor:
+        description: 'Complete flavor JSON object'
+        required: true
+        type: string
+      flavorName:
+        description: 'Name of the flavor'
+        required: true
+        type: string
+      flavorId:
+        description: 'ID of the flavor'
+        required: false
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      FLAVOR_JSON: ${{ inputs.flavor }}
+      FLAVOR_NAME: ${{ inputs.flavorName }}
+      FLAVOR_ID: ${{ inputs.flavorId }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply branding
+        uses: ./.github/actions/apply-branding-action
+
+      - name: Build app
+        run: 'echo "Building app for flavor ${{ inputs.flavorName }} (ID: ${{ inputs.flavorId }})"'
