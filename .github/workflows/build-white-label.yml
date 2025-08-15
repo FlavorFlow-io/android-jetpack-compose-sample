@@ -43,6 +43,10 @@ jobs:
           project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
           flavor: ${{ toJson(matrix) }}
 
+      - name: List files
+        run: ls -R
+
+        
       # - name: Grant execute permission for gradlew
       #   run: chmod +x gradlew
 
