@@ -44,9 +44,15 @@ jobs:
           flavor: ${{ toJson(matrix) }}
 
       - name: List files
-        run: ls -R
+        run: ls assets/logos
 
-        
+      - name: Upload logo
+        uses: actions/upload-artifact@v4
+        with:
+          name: logo-${{ matrix.name }}
+          path: assets/logos/*
+
+
       # - name: Grant execute permission for gradlew
       #   run: chmod +x gradlew
 
