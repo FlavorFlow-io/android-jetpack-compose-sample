@@ -43,24 +43,20 @@ jobs:
           project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
           flavor: ${{ toJson(matrix) }}
 
-      - name: List files
-        run: ls assets/logos
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'jetbrains'
+          java-version: '21'
 
-      - name: Upload logo
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run build
+        run: ./gradlew build
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: logo-${{ matrix.name }}
-          path: assets/logos/*
-
-
-      # - name: Grant execute permission for gradlew
-      #   run: chmod +x gradlew
-
-      # - name: Run build
-      #   run: ./gradlew build
-
-      # - name: Upload APK
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: app-${{ matrix.name }}.apk
-      #     path: '**/outputs/**/*.apk'
+          name: app-${{ matrix.name }}.apk
+          path: '**/outputs/**/*.apk'
