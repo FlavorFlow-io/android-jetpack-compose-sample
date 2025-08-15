@@ -43,31 +43,6 @@ jobs:
           project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
           flavor: ${{ toJson(matrix) }}
 
-      - name: List files
-        run: |
-          echo ""
-          echo "========== Build gradle files =========="
-          find . -type f -name "build.gradle.kts" -print -exec cat {} \;
-          echo ""
-          echo "========== AndroidManifest.xml =========="
-          cat app/src/main/AndroidManifest.xml
-          echo ""
-          echo "=========== FLAVOR JSON ==========="
-          echo "${{ toJson(matrix) }}"
-          echo ""
-          echo "========== Color.kt =========="
-          find . -type f -name "Color.kt" -print -exec cat {} \;
-          echo "========== Color.kt - end =========="
-          echo ""
-          echo "========== Theme.kt =========="
-          find . -type f -name "Theme.kt" -print -exec cat {} \;
-          echo "========== Theme.kt - end =========="
-          echo ""
-          echo "========== MainActivity.kt =========="
-          find . -type f -name "MainActivity.kt" -print -exec cat {} \;
-          echo "========== MainActivity.kt - end =========="
-          echo ""
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
