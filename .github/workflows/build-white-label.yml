@@ -1,0 +1,56 @@
+
+# .github/workflows/build-white-label.yml
+name: White-Label Build
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  fetch-flavors:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.flavors.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Fetch flavors
+        id: flavors
+        uses: ./.github/actions/fetch-flavors-action
+        with:
+          project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
+
+  build-flavors:
+    name: Build '${{ matrix.name }}'
+    needs: fetch-flavors
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.fetch-flavors.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Apply branding
+        uses: ./.github/actions/apply-branding-action
+        with:
+          project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
+          flavor: ${{ toJson(matrix) }}
+
+      # - name: Grant execute permission for gradlew
+      #   run: chmod +x gradlew
+
+      # - name: Run build
+      #   run: ./gradlew build
+
+      # - name: Upload APK
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: app-${{ matrix.name }}.apk
+      #     path: '**/outputs/**/*.apk'
