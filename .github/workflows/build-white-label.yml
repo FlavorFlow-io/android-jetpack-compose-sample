@@ -73,14 +73,14 @@ jobs:
           echo "========== MainActivity.kt - end =========="
           echo ""
 
-      # - name: Grant execute permission for gradlew
-      #   run: chmod +x gradlew
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-      # - name: Run build
-      #   run: ./gradlew build
+      - name: Run build
+        run: ./gradlew build
 
-      # - name: Upload APK
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: app-${{ matrix.name }}.apk
-      #     path: '**/outputs/**/*.apk'
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-${{ matrix.name }}.apk
+          path: '**/outputs/**/*.apk'
