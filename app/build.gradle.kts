@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "dev.lucianosantos.flavorflowsample"
+    namespace = "dev.lucianosantos.prismesample"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "dev.lucianosantos.flavorflowsample"
+        applicationId = "dev.lucianosantos.prismesample"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

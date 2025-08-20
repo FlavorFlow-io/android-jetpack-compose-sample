@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "FlavorFlow Sample"
+rootProject.name = "Prisme Sample"
 include(":app")
  

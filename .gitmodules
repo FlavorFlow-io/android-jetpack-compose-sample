@@ -1,6 +1,0 @@
-[submodule ".github/actions/fetch-flavors-action"]
-	path = .github/actions/fetch-flavors-action
-	url = https://github.com/lssoftwares/fetch-flavors-action.git
-[submodule ".github/actions/apply-branding-action"]
-	path = .github/actions/apply-branding-action
-	url = git@github.com:lssoftwares/apply-branding-action.git

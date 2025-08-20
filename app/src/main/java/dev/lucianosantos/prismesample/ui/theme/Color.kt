@@ -1,4 +1,4 @@
-package dev.lucianosantos.flavorflowsample.ui.theme
+package dev.lucianosantos.prismesample.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

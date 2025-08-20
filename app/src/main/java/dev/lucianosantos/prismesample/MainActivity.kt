@@ -1,4 +1,4 @@
-package dev.lucianosantos.flavorflowsample
+package dev.lucianosantos.prismesample
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -34,14 +34,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import dev.lucianosantos.flavorflowsample.ui.theme.FlavorFlowSampleTheme
+import dev.lucianosantos.prismesample.ui.theme.PrismeSampleTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            FlavorFlowSampleTheme {
+            PrismeSampleTheme {
                 HomeScreen()
             }
         }
@@ -139,7 +139,7 @@ fun AdaptiveIconCompat(
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun HomeScreenPreview() {
-    FlavorFlowSampleTheme {
+    PrismeSampleTheme {
         HomeScreen()
     }
 }

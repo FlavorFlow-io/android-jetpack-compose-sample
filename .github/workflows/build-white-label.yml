@@ -13,15 +13,12 @@ jobs:
       matrix: ${{ steps.flavors.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          token: ${{ secrets.PAT_TOKEN }}
 
       - name: Fetch flavors
         id: flavors
-        uses: ./.github/actions/fetch-flavors-action
+        uses: lucianosantosdev/prisme-fetch-flavors-action@v0.1
         with:
-          project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
+          project-api-key: ${{ secrets.PRISME_API_KEY }}
 
   build-flavors:
     name: Build '${{ matrix.name }}'
@@ -33,14 +30,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          token: ${{ secrets.PAT_TOKEN }}
 
       - name: Apply branding
-        uses: ./.github/actions/apply-branding-action
+        uses: lucianosantosdev/prisme-apply-flavor-action@v0.1
         with:
-          project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
+          project-api-key: ${{ secrets.PRISME_API_KEY }}
           flavor: ${{ toJson(matrix) }}
 
       - name: Setup Gradle
