@@ -20,6 +20,9 @@ jobs:
         with:
           project-api-key: ${{ secrets.PRISME_API_KEY }}
 
+      - name: Print flavors
+        run: echo "${{ steps.flavors.outputs.flavors }}"
+
   build-flavors:
     name: Build '${{ matrix.name }}'
     needs: fetch-flavors
