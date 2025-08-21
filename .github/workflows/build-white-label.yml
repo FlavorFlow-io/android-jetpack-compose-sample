@@ -10,7 +10,7 @@ jobs:
   fetch-flavors:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.flavors.outputs.matrix }}
+      flavors: ${{ steps.flavors.outputs.flavors }}
     steps:
       - uses: actions/checkout@v4
 
@@ -25,7 +25,7 @@ jobs:
     needs: fetch-flavors
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ fromJson(needs.fetch-flavors.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.fetch-flavors.outputs.flavors) }}
       fail-fast: false
 
     steps:
