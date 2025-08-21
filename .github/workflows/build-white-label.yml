@@ -23,6 +23,9 @@ jobs:
       - name: Print flavors
         run: echo "${{ steps.flavors.outputs.flavors }}"
 
+      - name: Print converting fromJson
+        run: echo "${{ fromJson(steps.flavors.outputs.flavors) }}"
+
   build-flavors:
     name: Build '${{ matrix.name }}'
     needs: fetch-flavors
