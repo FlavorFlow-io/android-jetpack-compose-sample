@@ -16,7 +16,7 @@ jobs:
 
       - name: Fetch flavors
         id: flavors
-        uses: lucianosantosdev/prisme-fetch-flavors-action@v0.1
+        uses: lucianosantosdev/prisme-fetch-flavors-action@v0.2
         with:
           project-api-key: ${{ secrets.PRISME_API_KEY }}
 
