@@ -16,7 +16,7 @@ jobs:
 
       - name: Fetch flavors
         id: flavors
-        uses: lucianosantosdev/prisme-fetch-flavors-action@v0.2
+        uses: FlavorFlow-io/fetch-flavors-action@v0.2
         with:
           project-api-key: ${{ secrets.PRISME_API_KEY }}
 
@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Apply branding
-        uses: lucianosantosdev/prisme-apply-flavor-action@v0.1
+        uses: FlavorFlow-io/apply-flavor-action@v0.2
         with:
           project-api-key: ${{ secrets.PRISME_API_KEY }}
           flavor: ${{ toJson(matrix) }}
