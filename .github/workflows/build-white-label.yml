@@ -13,10 +13,12 @@ jobs:
       matrix: ${{ steps.flavors.outputs.flavors }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Fetch flavors
         id: flavors
-        uses: FlavorFlow-io/fetch-flavors-action@v0.2
+        uses: ./.github/actions/fetch-flavors-action
         with:
           project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
 
@@ -36,9 +38,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - name: Apply branding
-        uses: FlavorFlow-io/apply-flavor-action@v0.2
+        uses: ./.github/actions/apply-flavor-action
         with:
           project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
           flavor: ${{ toJson(matrix) }}
