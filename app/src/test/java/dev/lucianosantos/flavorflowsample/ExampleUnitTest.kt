@@ -1,4 +1,4 @@
-package dev.lucianosantos.prismesample
+package dev.lucianosantos.flavorflowsample
 
 import org.junit.Test
 

@@ -1,4 +1,4 @@
-package dev.lucianosantos.prismesample.ui.theme
+package dev.lucianosantos.flavorflowsample.ui.theme
 
 import android.app.Activity
 import android.os.Build
@@ -34,7 +34,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun PrismeSampleTheme(
+fun FlavorFlowSampleTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit

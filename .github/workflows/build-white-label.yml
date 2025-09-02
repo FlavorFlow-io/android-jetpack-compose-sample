@@ -18,7 +18,7 @@ jobs:
         id: flavors
         uses: FlavorFlow-io/fetch-flavors-action@v0.2
         with:
-          project-api-key: ${{ secrets.PRISME_API_KEY }}
+          project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
 
       - name: Print flavors
         run: echo "${{ steps.flavors.outputs.flavors }}"
@@ -40,7 +40,7 @@ jobs:
       - name: Apply branding
         uses: FlavorFlow-io/apply-flavor-action@v0.2
         with:
-          project-api-key: ${{ secrets.PRISME_API_KEY }}
+          project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
           flavor: ${{ toJson(matrix) }}
 
       - name: Setup Gradle
