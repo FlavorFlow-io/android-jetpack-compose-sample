@@ -18,12 +18,12 @@ jobs:
 
       - name: Fetch flavors
         id: fetch-flavors-action
-        uses: ./.github/actions/fetch-flavors-action
+        uses: FlavorFlow-io/fetch-flavors-action@v1
         with:
           project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
 
   build-flavors:
-    name: Build '${{ matrix.name }}'
+    name: Build '${{ matrix.flavors.name }}'
     needs: fetch-flavors
     runs-on: ubuntu-latest
     strategy:
@@ -34,9 +34,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-
-      - name: Print flavor
-        run: echo "${{ toJson(matrix) }}"
 
       - name: Apply branding
         uses: ./.github/actions/apply-flavor-action
@@ -63,5 +60,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-${{ matrix.name }}.apk
+          name: app-${{ matrix.flavors.name }}.apk
           path: '**/outputs/**/*.apk'
