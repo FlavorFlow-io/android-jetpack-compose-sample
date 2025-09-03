@@ -50,7 +50,7 @@ jobs:
           echo "=============="
           echo $FLAVORFLOW_LOGO
           echo "=============="
-          cat $FLAVORFLOW_LOGO
+          cat "$FLAVORFLOW_LOGO"
           exit 1
 
       - uses: actions/setup-java@v4
