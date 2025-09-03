@@ -10,30 +10,24 @@ jobs:
   fetch-flavors:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.flavors.outputs.flavors }}
+      flavors: ${{ steps.fetch-flavors-action.outputs.flavors }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: true
 
       - name: Fetch flavors
-        id: flavors
+        id: fetch-flavors-action
         uses: ./.github/actions/fetch-flavors-action
         with:
           project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
-
-      - name: Print flavors
-        run: echo "${{ steps.flavors.outputs.flavors }}"
-
-      - name: Print converting fromJson
-        run: echo "${{ fromJson(steps.flavors.outputs.flavors) }}"
 
   build-flavors:
     name: Build '${{ matrix.name }}'
     needs: fetch-flavors
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ fromJson(needs.fetch-flavors.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.fetch-flavors.outputs.flavors) }}
       fail-fast: false
 
     steps:
@@ -41,14 +35,27 @@ jobs:
         with:
           submodules: true
 
+      - name: Print flavor
+        run: echo "${{ toJson(matrix) }}"
+
       - name: Apply branding
         uses: ./.github/actions/apply-flavor-action
         with:
           project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
           flavor: ${{ toJson(matrix) }}
+          project-type: 'android-native-compose'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'jetbrains'
+          java-version: '21'
+          
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle
 
       - name: Run build
         run: ./gradlew build
