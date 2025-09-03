@@ -42,16 +42,6 @@ jobs:
           project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
           flavor: ${{ toJson(matrix) }}
           project-type: 'android-native-compose'
-      
-      - name: Print environment variables
-        run: |
-          echo "=============="
-          env
-          echo "=============="
-          echo $FLAVORFLOW_LOGO
-          echo "=============="
-          cat "$FLAVORFLOW_LOGO"
-          exit 1
 
       - uses: actions/setup-java@v4
         with:
