@@ -23,11 +23,12 @@ jobs:
           project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
 
   build-flavors:
-    name: Build '${{ matrix.flavors.name }}'
+    name: Build '${{ matrix.name }}'
     needs: fetch-flavors
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ fromJson(needs.fetch-flavors.outputs.flavors) }}
+      matrix:
+        include: ${{ fromJson(needs.fetch-flavors.outputs.flavors).flavors }}
       fail-fast: false
 
     steps:
@@ -60,5 +61,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-${{ matrix.flavors.name }}.apk
+          name: app-${{ matrix.name }}.apk
           path: '**/outputs/**/*.apk'
