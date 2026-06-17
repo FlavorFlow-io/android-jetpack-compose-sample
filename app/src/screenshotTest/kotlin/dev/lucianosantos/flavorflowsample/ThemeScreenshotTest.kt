@@ -47,25 +47,33 @@ private data class FlavorBrand(
     val onSecondary: Color = Color.White,
 )
 
+// Golden-yellow palette to match the yellow "Cara de Pastel" logo.
 private val CaraDePastel = FlavorBrand(
     name = "Cara de Pastel",
-    primary = Color(0xFF6B4CFF),
-    secondary = Color(0xFF22C55E),
-    tertiary = Color(0xFF0000FF),
+    primary = Color(0xFFE6A700),
+    secondary = Color(0xFF8C5A2B),
+    tertiary = Color(0xFFE4572E),
+    background = Color(0xFFFFFCF2),
+    onPrimary = Color(0xFF1C1B1F), // dark text on the bright yellow primary
 )
 
+// Green palette to match the green "Pão Duro" bread/coin logo.
 private val PaoDuro = FlavorBrand(
     name = "Pão Duro",
-    primary = Color(0xFF6B4CFF),
-    secondary = Color(0xFF22C55E),
-    tertiary = Color(0xFF0000FF),
+    primary = Color(0xFF1E8E54),
+    secondary = Color(0xFFE0A82E),
+    tertiary = Color(0xFFB5793B),
+    background = Color(0xFFF3FBF5),
+    onSecondary = Color(0xFF1C1B1F), // dark text on the golden secondary
 )
 
+// Orange palette to match the orange "To Com Fome" burger logo.
 private val ToComFome = FlavorBrand(
     name = "To Com Fome",
-    primary = Color(0xFF6B4CFF),
-    secondary = Color(0xFF22C55E),
-    tertiary = Color(0xFF0000FF),
+    primary = Color(0xFFE2661F),
+    secondary = Color(0xFF4C9A3F),
+    tertiary = Color(0xFF7B4B2A),
+    background = Color(0xFFFFF7F0),
 )
 
 /** Renders the shared UI under a flavor's brand colors. */
