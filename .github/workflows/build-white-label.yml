@@ -59,6 +59,17 @@ jobs:
       - name: Run build
         run: ./gradlew build
 
+      # Render the theme screenshot test against the LIVE theme that
+      # apply-flavor-action just rewrote, capturing this flavor's branding.
+      - name: Record theme screenshot for this flavor
+        run: ./gradlew :app:updateDebugScreenshotTest
+
+      - name: Upload theme screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: theme-screenshot-${{ matrix.name }}
+          path: app/src/screenshotTestDebug/reference/
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:

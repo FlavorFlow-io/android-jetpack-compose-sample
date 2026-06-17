@@ -11,112 +11,69 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.android.tools.screenshot.PreviewTest
+import dev.lucianosantos.flavorflowsample.ui.theme.FlavorFlowSampleTheme
 
 /**
- * Per-flavor Compose Preview Screenshot Tests that validate theme application.
+ * Screenshot test that validates theme application.
  *
- * There is one `@PreviewTest @Preview` per FlavorFlow client, each rendering the
- * shared UI under that flavor's brand colors. Running
- * `./gradlew :app:updateDebugScreenshotTest` writes one golden per flavor under
- * `app/src/screenshotTestDebug/reference/`; `validateDebugScreenshotTest` then
- * verifies the rendered output still matches. When a flavor's theme changes, its
- * golden changes — which is what proves theme application works.
+ * Nothing here is flavor-specific: it renders the app's own `FlavorFlowSampleTheme`
+ * and reads the app name from resources (`R.string.app_name`). Both are rewritten
+ * per client at build time by the FlavorFlow apply-flavor-action (which runs after
+ * fetch-flavors-action in the build-white-label matrix), so the rendered colours
+ * and name are whatever the applied flavor sets — proving theme application works
+ * without hardcoding anything.
  *
- * `@PreviewTest` (from com.android.tools.screenshot) is REQUIRED — only previews
- * carrying it are picked up by the screenshot-test engine.
+ * `dynamicColor = false` forces the app's (flavor-driven) color scheme instead of
+ * the device's Material You colors, so the render is deterministic.
  *
- * Colors mirror each client's `theme.light` from the FlavorFlow API for project
- * 0RAF99wHJEFM6otnO0Xo. They're declared here (rather than read from the live
- * theme) so each flavor renders deterministically in isolation.
+ * - Base repo: the golden reflects the default theme (guarded by screenshot-test.yml).
+ * - White-label matrix: each flavor records its own screenshot after apply-flavor.
+ *
+ * `@PreviewTest` (com.android.tools.screenshot) is REQUIRED for the engine to pick
+ * up the preview.
  */
-private data class FlavorBrand(
-    val name: String,
-    val primary: Color,
-    val secondary: Color,
-    val tertiary: Color,
-    val background: Color = Color(0xFFF7F9FB),
-    val onPrimary: Color = Color.White,
-    val onSecondary: Color = Color.White,
-)
-
-// Golden-yellow palette to match the yellow "Cara de Pastel" logo.
-private val CaraDePastel = FlavorBrand(
-    name = "Cara de Pastel",
-    primary = Color(0xFFE6A700),
-    secondary = Color(0xFF8C5A2B),
-    tertiary = Color(0xFFE4572E),
-    background = Color(0xFFFFFCF2),
-    onPrimary = Color(0xFF1C1B1F), // dark text on the bright yellow primary
-)
-
-// Green palette to match the green "Pão Duro" bread/coin logo.
-private val PaoDuro = FlavorBrand(
-    name = "Pão Duro",
-    primary = Color(0xFF1E8E54),
-    secondary = Color(0xFFE0A82E),
-    tertiary = Color(0xFFB5793B),
-    background = Color(0xFFF3FBF5),
-    onSecondary = Color(0xFF1C1B1F), // dark text on the golden secondary
-)
-
-// Orange palette to match the orange "To Com Fome" burger logo.
-private val ToComFome = FlavorBrand(
-    name = "To Com Fome",
-    primary = Color(0xFFE2661F),
-    secondary = Color(0xFF4C9A3F),
-    tertiary = Color(0xFF7B4B2A),
-    background = Color(0xFFFFF7F0),
-)
-
-/** Renders the shared UI under a flavor's brand colors. */
 @Composable
-private fun FlavorThemePreview(brand: FlavorBrand) {
-    MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = brand.primary,
-            onPrimary = brand.onPrimary,
-            secondary = brand.secondary,
-            onSecondary = brand.onSecondary,
-            tertiary = brand.tertiary,
-            background = brand.background,
-        )
-    ) {
-        Surface(color = MaterialTheme.colorScheme.background) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text(text = brand.name, color = MaterialTheme.colorScheme.onBackground)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ColorChip("primary", MaterialTheme.colorScheme.primary)
-                    ColorChip("secondary", MaterialTheme.colorScheme.secondary)
-                    ColorChip("tertiary", MaterialTheme.colorScheme.tertiary)
-                }
-                Button(
-                    onClick = {},
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-                ) { Text("Primary button") }
-                Button(
-                    onClick = {},
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary,
-                        contentColor = MaterialTheme.colorScheme.onSecondary,
-                    ),
-                ) { Text("Secondary button") }
+private fun ThemeShowcase() {
+    Surface(color = MaterialTheme.colorScheme.background) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            // App name comes from resources — apply-flavor sets it per client.
+            Text(
+                text = stringResource(R.string.app_name),
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            // Colours come from the live theme — apply-flavor rewrites the scheme.
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ColorChip("primary", MaterialTheme.colorScheme.primary)
+                ColorChip("secondary", MaterialTheme.colorScheme.secondary)
+                ColorChip("tertiary", MaterialTheme.colorScheme.tertiary)
             }
+            Button(
+                onClick = {},
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+            ) { Text("Primary button") }
+            Button(
+                onClick = {},
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary,
+                ),
+            ) { Text("Secondary button") }
         }
     }
 }
@@ -130,16 +87,10 @@ private fun ColorChip(name: String, color: Color) {
 }
 
 @PreviewTest
-@Preview(name = "Cara de Pastel", showBackground = true)
+@Preview(showBackground = true)
 @Composable
-fun CaraDePastelThemePreview() = FlavorThemePreview(CaraDePastel)
-
-@PreviewTest
-@Preview(name = "Pão Duro", showBackground = true)
-@Composable
-fun PaoDuroThemePreview() = FlavorThemePreview(PaoDuro)
-
-@PreviewTest
-@Preview(name = "To Com Fome", showBackground = true)
-@Composable
-fun ToComFomeThemePreview() = FlavorThemePreview(ToComFome)
+fun AppThemePreview() {
+    FlavorFlowSampleTheme(dynamicColor = false) {
+        ThemeShowcase()
+    }
+}
