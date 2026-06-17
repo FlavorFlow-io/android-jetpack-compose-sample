@@ -12,13 +12,13 @@ jobs:
     outputs:
       flavors: ${{ steps.fetch-flavors-action.outputs.flavors }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: true
 
       - name: Fetch flavors
         id: fetch-flavors-action
-        uses: FlavorFlow-io/fetch-flavors-action@0dcc438f55472cfec63763f1c236a08c7d9877ef
+        uses: FlavorFlow-io/fetch-flavors-action@f143dafe9b0a590a317dfe911d2279464d087ec2
         with:
           api-key: ${{ secrets.TEST_API_KEY }}
           project-id: ${{ vars.TEST_PROJECT_ID }}
@@ -33,7 +33,7 @@ jobs:
       fail-fast: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: true
 
