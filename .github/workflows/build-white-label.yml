@@ -20,8 +20,8 @@ jobs:
         id: fetch-flavors-action
         uses: FlavorFlow-io/fetch-flavors-action@0dcc438f55472cfec63763f1c236a08c7d9877ef
         with:
-          api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
-          project-id: ${{ vars.FLAVORFLOW_PROJECT_ID }}
+          api-key: ${{ secrets.TEST_API_KEY }}
+          project-id: ${{ vars.TEST_PROJECT_ID }}
 
   build-flavors:
     name: Build '${{ matrix.name }}'
@@ -40,7 +40,7 @@ jobs:
       - name: Apply branding
         uses: ./.github/actions/apply-flavor-action
         with:
-          project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
+          project-api-key: ${{ secrets.TEST_API_KEY }}
           flavor: ${{ toJson(matrix) }}
           project-type: 'android-native-compose'
 
