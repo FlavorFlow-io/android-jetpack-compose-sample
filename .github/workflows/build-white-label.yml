@@ -18,9 +18,10 @@ jobs:
 
       - name: Fetch flavors
         id: fetch-flavors-action
-        uses: FlavorFlow-io/fetch-flavors-action@v1
+        uses: FlavorFlow-io/fetch-flavors-action@0dcc438f55472cfec63763f1c236a08c7d9877ef
         with:
-          project-api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
+          api-key: ${{ secrets.FLAVORFLOW_API_KEY }}
+          project-id: ${{ vars.FLAVORFLOW_PROJECT_ID }}
 
   build-flavors:
     name: Build '${{ matrix.name }}'
