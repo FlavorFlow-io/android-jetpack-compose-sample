@@ -44,13 +44,13 @@ jobs:
           flavor: ${{ toJson(matrix) }}
           project-type: 'android-native-compose'
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: 'jetbrains'
           java-version: '21'
           
       - name: Cache Gradle packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
@@ -71,7 +71,7 @@ jobs:
 
       - name: Upload screenshot diff report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: screenshot-report-${{ matrix.name }}
           path: |
@@ -79,7 +79,7 @@ jobs:
             app/build/outputs/screenshotTest-results/
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: app-${{ matrix.name }}.apk
           path: '**/outputs/**/*.apk'
