@@ -13,12 +13,10 @@ jobs:
       flavors: ${{ steps.fetch-flavors-action.outputs.flavors }}
     steps:
       - uses: actions/checkout@v5
-        with:
-          submodules: true
 
       - name: Fetch flavors
         id: fetch-flavors-action
-        uses: FlavorFlow-io/fetch-flavors-action@f143dafe9b0a590a317dfe911d2279464d087ec2
+        uses: FlavorFlow-io/fetch-flavors-action@v1
         with:
           api-key: ${{ secrets.TEST_API_KEY }}
           project-id: ${{ vars.TEST_PROJECT_ID }}
@@ -34,11 +32,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
-        with:
-          submodules: true
 
       - name: Apply branding
-        uses: ./.github/actions/apply-flavor-action
+        uses: FlavorFlow-io/apply-flavor-action@v1
         with:
           project-api-key: ${{ secrets.TEST_API_KEY }}
           flavor: ${{ toJson(matrix) }}
