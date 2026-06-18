@@ -15,3 +15,6 @@
 local.properties
 .env
 .secrets
+# Compose screenshot reference path is populated at build time from
+# app/src/screenshotTest/goldens by scripts/select-screenshot-golden.sh
+app/src/screenshotTestDebug/reference/

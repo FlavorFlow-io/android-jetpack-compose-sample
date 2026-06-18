@@ -59,16 +59,24 @@ jobs:
       - name: Run build
         run: ./gradlew build
 
-      # Render the theme screenshot test against the LIVE theme that
-      # apply-flavor-action just rewrote, capturing this flavor's branding.
-      - name: Record theme screenshot for this flavor
-        run: ./gradlew :app:updateDebugScreenshotTest
+      # Validate the theme screenshot test against THIS flavor's committed golden.
+      # apply-flavor-action rewrote the live Compose theme above; we pick the
+      # golden that matches the flavor's app name and copy it into the path the
+      # screenshot plugin expects, then validate the fresh render against it.
+      - name: Select golden for this flavor
+        run: ./scripts/select-screenshot-golden.sh "${{ matrix.app_name }}"
 
-      - name: Upload theme screenshot
+      - name: Validate theme screenshot for this flavor
+        run: ./gradlew :app:validateDebugScreenshotTest --stacktrace
+
+      - name: Upload screenshot diff report
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: theme-screenshot-${{ matrix.name }}
-          path: app/src/screenshotTestDebug/reference/
+          name: screenshot-report-${{ matrix.name }}
+          path: |
+            app/build/reports/screenshotTest/
+            app/build/outputs/screenshotTest-results/
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
