@@ -22,7 +22,7 @@ jobs:
           project-id: ${{ vars.TEST_PROJECT_ID }}
 
   build-flavors:
-    name: Build '${{ matrix.flavor.name }}'
+    name: Build '${{ matrix.name }}'
     needs: fetch-flavors
     runs-on: ubuntu-latest
     strategy:
@@ -37,7 +37,7 @@ jobs:
         uses: FlavorFlow-io/apply-flavor-action@v1
         with:
           project-api-key: ${{ secrets.TEST_API_KEY }}
-          flavor: ${{ matrix.flavor }}
+          flavor: ${{ matrix.config }}
           project-type: 'android-native-compose'
 
       - uses: actions/setup-java@v5
@@ -60,7 +60,7 @@ jobs:
       # golden that matches the flavor's app name and copy it into the path the
       # screenshot plugin expects, then validate the fresh render against it.
       - name: Select golden for this flavor
-        run: ./scripts/select-screenshot-golden.sh "${{ matrix.flavor.app_name }}"
+        run: ./scripts/select-screenshot-golden.sh "${{ matrix.app_name }}"
 
       - name: Validate theme screenshot for this flavor
         run: ./gradlew :app:validateDebugScreenshotTest --stacktrace
@@ -69,7 +69,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: screenshot-report-${{ matrix.flavor.name }}
+          name: screenshot-report-${{ matrix.name }}
           path: |
             app/build/reports/screenshotTest/
             app/build/outputs/screenshotTest-results/
@@ -77,5 +77,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: app-${{ matrix.flavor.name }}.apk
+          name: app-${{ matrix.name }}.apk
           path: '**/outputs/**/*.apk'
