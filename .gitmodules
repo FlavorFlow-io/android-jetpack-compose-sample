@@ -1,6 +1,0 @@
-[submodule ".github/actions/apply-flavor-action"]
-	path = .github/actions/apply-flavor-action
-	url = git@github.com:FlavorFlow-io/apply-flavor-action.git
-[submodule ".github/actions/fetch-flavors-action"]
-	path = .github/actions/fetch-flavors-action
-	url = git@github.com:FlavorFlow-io/fetch-flavors-action.git
